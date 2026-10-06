@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">AI Agent</string>
+    <string name="hint_speak">Speak or type...</string>
+    <string name="status_listening">Listening...</string>
+    <string name="status_thinking">Thinking...</string>
+    <string name="status_connected">Connected</string>
+    <string name="status_disconnected">Disconnected</string>
+    <string name="send">Send</string>
+    <string name="voice_input">Voice input</string>
+    <string name="stop_speaking">Stop speaking</string>
+    <string name="accessibility_description">AI Agent needs Accessibility to control your phone — read screen, tap buttons, type text, and navigate apps. Enable to allow the AI to execute commands.</string>
+</resources>

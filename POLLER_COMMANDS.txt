@@ -1,0 +1,34 @@
+# tanel-2 Poller Commands
+# Save these — you will need them every time you start a new Z.ai sandbox chat.
+
+## Step 1: Set up tanel-2 on the sandbox
+Ask the AI to run:
+  curl -sL https://raw.githubusercontent.com/arun6a/tanel-2/main/setup.sh | bash
+
+The AI will generate a new token and print the connect command.
+Copy the TOKEN and BASE_URL from the output.
+
+## Step 2: Start poller in AndroidIDE-Rv2
+
+  TOKEN=<paste-token-here> \
+  BASE_URL=<paste-sandbox-url-here> \
+  CHANNEL=ide node poll.cjs
+
+## Step 3: Start poller in Termux (for stability)
+
+  termux-wake-lock
+  TOKEN=<paste-token-here> \
+  BASE_URL=<paste-sandbox-url-here> \
+  node poll.cjs
+
+## Tips
+- Get the poller script: curl -s https://raw.githubusercontent.com/arun6a/tanel-2/main/poll.cjs > poll.cjs
+- Keep AndroidIDE in the foreground (or recent apps) so Android does not kill it
+- Use termux-wake-lock in Termux so it survives backgrounding
+- If poller dies, just re-run the same command
+- The sandbox URL looks like: https://preview-chat-XXXX.space-z.ai
+
+## For this current sandbox
+  TOKEN=b640579aa3a2f0fe3bdee80c9a410b8e2feaec0ed30f4723
+  BASE_URL=https://preview-chat-c9aadfe1-a665-4f7c-8232-c9d14a73c0cb.space-z.ai
+  CHANNEL=ide node poll.cjs
