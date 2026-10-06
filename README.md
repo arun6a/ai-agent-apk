@@ -1,63 +1,123 @@
-# AI Agent APK
+# AI Agent for Android
 
-An Android app that turns your phone into an AI-powered autonomous agent. Built with Kotlin, runs as a foreground service, controls the phone via Accessibility, and uses cloud AI (Z.ai API) for reasoning + vision.
+An autonomous AI agent that controls your Android phone via voice or text. Uses cloud AI (OpenRouter/Gemini/Z.ai) for reasoning and executes 80+ tools on your device.
 
-## Current Version: v1.4.1
+**Current version: v2.2.1** (versionCode 57)
 
-### 70+ Tools Available
+## Features
 
-| Category | Tools |
-|----------|-------|
-| **Screen Control** | readScreen, tap, clickByText, type, swipe, scrollDown/Up, pressBack/Home/Enter, submitInput |
-| **App Management** | launchApp, listInstalledApps, getAppInfo, forceStopApp, uninstallApp |
-| **Vision (VLM)** | analyzeScreen, findElement, takeScreenshotToGallery |
-| **Memory** | remember, recall, recallAll |
-| **Terminal** | runShellCommand |
-| **Contacts** | readContacts, searchContacts, callContact |
-| **Phone & SMS** | sendSMS, getCallLog, sendEmail, shareText |
-| **Calendar** | getCalendarEvents, createCalendarEvent, setAlarm, setTimer |
-| **Location** | getCurrentLocation, openMaps |
-| **Device Control** | getBatteryLevel, getVolume, setVolume, setBrightness, toggleFlashlight, lockScreen, getBluetoothState, getNetworkInfo, getDeviceInfo |
-| **Media** | mediaPlayPause, mediaNext, mediaPrevious |
-| **Files** | listFiles, readFile, writeFile, copyFile, moveFile, deleteFile, createDirectory |
-| **Web** | webSearch, makeHttpRequest, downloadFile, openUrl |
-| **Clipboard** | getClipboard, setClipboard |
-| **System** | getCurrentTime, pingHost, translateText |
-| **Camera** | takePhoto |
+### Multi-Provider AI Support
+Choose your AI provider in Settings — no rebuild needed:
+- **OpenRouter** (free, unlimited) — Nemotron 120B, Cohere, Poolside, Liquid
+- **Google Gemini** (free tier) — 2.0 Flash, 2.5 Flash, 1.5 Flash, 1.5 Pro
+- **Z.ai Proxy** (sandbox) — GLM-4.6, GLM-4 Flash
+- **Custom** — any OpenAI-compatible endpoint (OpenAI, Groq, Together, Ollama)
 
-### Features
-- ✅ Chat UI with dark theme
-- ✅ Voice input (STT) + output (TTS) — English + Tamil
-- ✅ Agent loop (verify + retry, up to 25 iterations)
-- ✅ Floating overlay button (tap=read screen, long-press=voice, drag=move)
-- ✅ Persistent memory (SQLite)
-- ✅ Rules engine (time-based + notification triggers)
-- ✅ Settings UI
-- ✅ Task interruption (stop button)
-- ✅ Chat history persistence
-- ✅ LLM proxy on sandbox (Z.ai GLM-4.6)
-- ✅ VLM proxy on sandbox (Z.ai GLM-4V for vision)
-- ✅ Web search proxy on sandbox
+### Voice Control
+- Speech-to-Text (Android SpeechRecognizer) — English + Tamil
+- Text-to-Speech (Android TTS)
+- Floating overlay button — tap to read screen, long-press for voice input
+
+### Screen Control (Accessibility Service)
+- readScreen() — extracts all text on screen (auto-fallback to VLM)
+- tap(x, y) — tap at coordinates
+- clickByText(text) — click UI element by text
+- type(text) — type into focused field
+- swipe, scroll, pressBack, pressHome, submitInput, takeScreenshot
+
+### 80+ Tools
+- Apps: launchApp, listInstalledApps, forceStopApp, uninstallApp
+- Contacts: readContacts, searchContacts, callContact, sendSMS, getCallLog
+- Calendar: getCalendarEvents, createCalendarEvent, setAlarm, setTimer
+- Files: listFiles, readFile, writeFile, copyFile, moveFile, deleteFile
+- Web: webSearch, makeHttpRequest, downloadFile, openUrl
+- In-App Browser: browserOpen, browserSearch, browserReadPage, browserClick
+- Device: getBatteryLevel, getVolume, setVolume, setBrightness, toggleFlashlight
+- Media: mediaPlayPause, mediaNext, mediaPrevious, takePhoto
+- Memory: remember(key, value), recall(key), recallAll()
+- Location: getCurrentLocation, openMaps
+- Terminal: runShellCommand
+- Vision: analyzeScreen(prompt), findElement(description), translateText
+
+### Agent Loop
+1. User sends message
+2. AI decides which tools to call (up to 6 per step)
+3. Tools execute on the phone
+4. Results fed back to AI
+5. AI decides next step or completes task
+
+### Memory & Rules (SQLite)
+- Remembers facts about you (remember/recall)
+- Time-triggered rules (e.g., "every day at 9am, check battery")
+- Notification-triggered rules
+- Always-on foreground service
+
+## Setup
+
+### Prerequisites
+1. Android 7.0+ (API 24)
+2. Enable Accessibility Service for AI Agent
+3. Grant Display over other apps permission (for floating button)
+4. Get a free API key:
+   - OpenRouter: https://openrouter.ai/keys (recommended — free, no quota)
+   - Gemini: https://aistudio.google.com/apikey
+
+### Build from Source
+```bash
+git clone https://github.com/arun6a/ai-agent-apk.git
+cd ai-agent-apk
+./gradlew assembleDebug
+# APK: app/build/outputs/apk/debug/app-debug.apk
+```
+
+Requires: JDK 17, Android SDK 34
 
 ## Architecture
 
 ```
-Phone APK ←→ Sandbox (Next.js proxy) ←→ Z.ai API (LLM + VLM)
+app/src/main/java/com/ai/agent/
+├── MainActivity.kt              # Chat UI + agent loop
+├── Config.kt                    # App configuration
+├── VoiceManager.kt             # STT/TTS
+├── accessibility/
+│   └── AgentAccessibilityService.kt  # Screen control
+├── llm/
+│   ├── AIProvider.kt           # Provider config (OpenRouter/Gemini/Z.ai/Custom)
+│   └── LLMClient.kt            # Multi-provider chat client
+├── tools/
+│   └── ToolExecutor.kt         # 80+ tool implementations
+├── service/
+│   ├── AgentService.kt         # Always-on foreground service
+│   └── OverlayManager.kt       # Floating button
+├── rules/
+│   ├── RuleEngine.kt           # Time/notification triggers
+│   └── NotificationListener.kt
+├── storage/
+│   └── AgentDatabase.kt        # SQLite (conversations, memory, rules)
+├── browser/
+│   └── BrowserController.kt   # In-app WebView
+└── ui/
+    ├── SettingsActivity.kt
+    ├── AIProviderSettingsActivity.kt
+    └── RulesActivity.kt
 ```
 
-The phone calls the sandbox's public URL, which proxies to Z.ai's internal API with proper auth.
+## Tech Stack
+- Language: Kotlin
+- AI: OpenRouter (Nemotron 120B) / Gemini / Z.ai
+- UI: Android Views (programmatic)
+- Storage: SQLite (Android SQLiteDatabase)
+- Networking: OkHttp
+- Build: Gradle 8.10.2
 
-## Build
+## Version History
+- v2.2.1 — Fixed launchApp arg name (accepts both "package" and "pkg")
+- v2.2.0 — Multi-provider support (OpenRouter/Gemini/Z.ai/Custom)
+- v1.9.0 — Removed local LLM, cloud-only
+- v1.4.0 — 70+ tools (terminal, contacts, SMS, calendar, files)
+- v1.0.0 — MVP with voice, accessibility, agent loop, vision
 
-```bash
-export JAVA_HOME=~/jdk-17.0.13+11
-export ANDROID_HOME=~/android-sdk
-cd /home/z/my-project/ai-agent-apk
-./gradlew assembleDebug --no-daemon
-```
-
-## GitHub
-https://github.com/arun6a/ai-agent-apk
-
-## License
-MIT
+## Links
+- GitHub: https://github.com/arun6a/ai-agent-apk
+- OpenRouter (free AI): https://openrouter.ai
+- Gemini (free AI): https://aistudio.google.com
