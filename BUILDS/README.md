@@ -33,6 +33,7 @@ Per-version changelogs for `arun6a/ai-agent-apk`. Each file documents one releas
 | v2.3.1 | 2026-10-07 | 60 | Fix "Accessibility service not running" false negative | [v2.3.1.md](./v2.3.1.md) |
 | v2.4.0 | 2026-10-07 | 61 | Add Groq/Together providers, multi-provider VLM, smarter prompts | [v2.4.0.md](./v2.4.0.md) |
 | **v3.0.0** | 2026-10-07 | 62 | **Proactive Assistant — AI-driven rules + AlarmManager + fixed notification wiring** | [v3.0.0.md](./v3.0.0.md) |
+| **v3.1.0** | 2026-10-07 | 63 | **9 new event triggers (battery/call/SMS/headset/screen/WiFi/app) + new tools** | [v3.1.0.md](./v3.1.0.md) |
 | (template) | — | — | — | [TEMPLATE.md](./TEMPLATE.md) |
 
 ## Quick History Summary
@@ -50,6 +51,7 @@ Per-version changelogs for `arun6a/ai-agent-apk`. Each file documents one releas
 
 **v3.x.x** — Proactive Assistant
 - v3.0.0: AI-driven rule creation (createRule/listRules/deleteRule/modifyRule tools), AlarmManager-based scheduling (survives app kill), fixed NotificationListener → AgentService wiring, full agent loop for rule actions, clean RulesActivity (no more manual form)
+- v3.1.0: 9 new event triggers wired up (battery_low, charging, discharging, incoming_call, sms_received, headset_connected/disconnected, screen_on/off, user_unlocked, wifi_connected/disconnected, app_installed/uninstalled) + BootReceiver for reboot survival + 4 new tools (shareFile, openDialer, openContact, openSettings) + FileProvider + 4 new permissions
 
 ## File Naming Convention
 - `vMAJOR.MINOR.PATCH.md` — matches `versionName` from `app/build.gradle.kts`

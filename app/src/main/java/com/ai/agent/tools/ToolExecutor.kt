@@ -808,6 +808,86 @@ class ToolExecutor(private val context: Context) {
                     ToolResult(true, "Share dialog opened")
                 } catch (e: Exception) { ToolResult(false, "Share error: ${e.message}") }
             }
+            // === SHARE FILE ===
+            "shareFile" -> {
+                val path = call.args["path"] as? String ?: return ToolResult(false, "missing path")
+                val mimeType = call.args["mimeType"] as? String ?: "*/*"
+                try {
+                    val file = java.io.File(path)
+                    if (!file.exists()) return ToolResult(false, "file not found: $path")
+                    // Use FileProvider for secure sharing (Android 7+)
+                    val uri = androidx.core.content.FileProvider.getUriForFile(
+                        context,
+                        context.packageName + ".fileprovider",
+                        file
+                    )
+                    val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                        type = mimeType
+                        putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(android.content.Intent.createChooser(intent, "Share file via").apply {
+                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    })
+                    ToolResult(true, "File share dialog opened: $path")
+                } catch (e: Exception) { ToolResult(false, "Share file error: ${e.message}") }
+            }
+            // === OPEN DIALER (don't auto-call, just open) ===
+            "openDialer" -> {
+                val number = call.args["number"] as? String ?: return ToolResult(false, "missing number")
+                try {
+                    val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
+                        data = android.net.Uri.parse("tel:$number")
+                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                    ToolResult(true, "Opened dialer with $number")
+                } catch (e: Exception) { ToolResult(false, "Dialer error: ${e.message}") }
+            }
+            // === OPEN CONTACT CARD ===
+            "openContact" -> {
+                val contactId = (call.args["id"] as? Number)?.toLong()
+                    ?: return ToolResult(false, "missing id (use searchContacts first)")
+                try {
+                    val uri = android.content.ContentUris.withAppendedId(
+                        android.provider.ContactsContract.Contacts.CONTENT_URI,
+                        contactId
+                    )
+                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                        data = uri
+                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                    ToolResult(true, "Opened contact $contactId")
+                } catch (e: Exception) { ToolResult(false, "Open contact error: ${e.message}") }
+            }
+            // === OPEN SETTINGS PAGE (deep-link) ===
+            "openSettings" -> {
+                val page = call.args["page"] as? String ?: "main"
+                try {
+                    val intent = when (page.lowercase()) {
+                        "wifi" -> android.provider.Settings.ACTION_WIFI_SETTINGS
+                        "bluetooth" -> android.provider.Settings.ACTION_BLUETOOTH_SETTINGS
+                        "location" -> android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS
+                        "accessibility" -> android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS
+                        "notification" -> android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS
+                        "apps", "applications" -> android.provider.Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS
+                        "display", "brightness" -> android.provider.Settings.ACTION_DISPLAY_SETTINGS
+                        "sound", "volume" -> android.provider.Settings.ACTION_SOUND_SETTINGS
+                        "battery" -> android.provider.Settings.ACTION_BATTERY_SAVER_SETTINGS
+                        "storage" -> android.provider.Settings.ACTION_INTERNAL_STORAGE_SETTINGS
+                        "datetime", "date", "time" -> android.provider.Settings.ACTION_DATE_SETTINGS
+                        "language" -> android.provider.Settings.ACTION_LOCALE_SETTINGS
+                        "developer" -> android.provider.Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS
+                        "about", "device" -> android.provider.Settings.ACTION_DEVICE_INFO_SETTINGS
+                        else -> android.provider.Settings.ACTION_SETTINGS  // main settings
+                    }.let { action -> android.content.Intent(action) }
+                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    context.startActivity(intent)
+                    ToolResult(true, "Opened settings: $page")
+                } catch (e: Exception) { ToolResult(false, "Settings error: ${e.message}") }
+            }
             // === PING ===
             "pingHost" -> {
                 val host = call.args["host"] as? String ?: return ToolResult(false, "missing host")
@@ -890,7 +970,14 @@ class ToolExecutor(private val context: Context) {
                 val days = call.args["days"] as? String  // nullable — "mon,tue,wed,thu,fri" or null for daily
 
                 // Validate triggerType
-                val validTypes = listOf("time", "notification", "battery_low", "charging")
+                val validTypes = listOf(
+                    "time", "notification", "battery_low", "charging", "discharging",
+                    "incoming_call", "sms_received",
+                    "headset_connected", "headset_disconnected",
+                    "screen_on", "screen_off", "user_unlocked",
+                    "wifi_connected", "wifi_disconnected",
+                    "app_installed", "app_uninstalled"
+                )
                 if (triggerType !in validTypes) {
                     return ToolResult(false, "invalid triggerType. Use one of: $validTypes")
                 }

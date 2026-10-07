@@ -9,7 +9,7 @@ This document explains the full project history, current state, and what NOT to 
 ## Project Overview
 
 **Repo**: https://github.com/arun6a/ai-agent-apk
-**Current Version**: v3.0.0 (versionCode 62)
+**Current Version**: v3.1.0 (versionCode 63)
 **Platform**: Android 7.0+ (API 24)
 **Language**: Kotlin
 **Build**: Gradle 8.10.2, JDK 17, Android SDK 34
@@ -28,7 +28,7 @@ Per-version changelogs live in [`BUILDS/`](./BUILDS/README.md). Each version has
 - Test cases
 - User feedback that drove the changes
 
-Start with the latest version file ([`BUILDS/v3.0.0.md`](./BUILDS/v3.0.0.md)) to understand current state, then work backwards if you need context on older changes.
+Start with the latest version file ([`BUILDS/v3.1.0.md`](./BUILDS/v3.1.0.md)) to understand current state, then work backwards if you need context on older changes.
 
 ---
 

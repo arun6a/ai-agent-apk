@@ -56,6 +56,10 @@ class AgentService : Service() {
     private var tts: TextToSpeech? = null
     private var ruleEngine: com.ai.agent.rules.RuleEngine? = null
 
+    // Programmatic receivers (can't be in manifest for these actions)
+    private var incomingCallReceiver: com.ai.agent.rules.IncomingCallReceiver? = null
+    private var screenReceiver: android.content.BroadcastReceiver? = null
+
     override fun onCreate() {
         super.onCreate()
         Log.i(TAG, "AgentService created")
@@ -71,7 +75,7 @@ class AgentService : Service() {
         llmClient = LLMClient(this)
         toolExecutor = ToolExecutor(this)
 
-        // Start rule engine
+        // Start rule engine (legacy handler-based for foreground time rules — kept for back-compat)
         ruleEngine = com.ai.agent.rules.RuleEngine(this)
         ruleEngine?.onRuleTriggered = { rule ->
             Log.i(TAG, "Rule triggered: ${rule.name}")
@@ -79,6 +83,46 @@ class AgentService : Service() {
             processVoiceCommand(rule.action)  // execute the rule's action
         }
         ruleEngine?.start()
+
+        // Register programmatic receivers (cannot be in AndroidManifest.xml for these actions)
+        registerProgrammaticReceivers()
+    }
+
+    /**
+     * Register receivers that must be registered at runtime (can't be in manifest):
+     * - IncomingCallReceiver (uses TelephonyManager.listen, not a broadcast)
+     * - ScreenReceiver (ACTION_SCREEN_ON/OFF/USER_PRESENT can't be in manifest)
+     */
+    private fun registerProgrammaticReceivers() {
+        try {
+            // Incoming call listener (uses PhoneStateListener, not BroadcastReceiver)
+            incomingCallReceiver = com.ai.agent.rules.IncomingCallReceiver(this)
+            incomingCallReceiver?.start()
+
+            // Screen on/off + user present
+            screenReceiver = object : android.content.BroadcastReceiver() {
+                override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
+                    if (context != null && intent != null) {
+                        com.ai.agent.rules.ScreenReceiver()
+                            .onReceive(context, intent)
+                    }
+                }
+            }
+            val filter = android.content.IntentFilter().apply {
+                addAction(android.content.Intent.ACTION_SCREEN_ON)
+                addAction(android.content.Intent.ACTION_SCREEN_OFF)
+                addAction(android.content.Intent.ACTION_USER_PRESENT)
+            }
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(screenReceiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                @Suppress("DEPRECATION")
+                registerReceiver(screenReceiver, filter)
+            }
+            Log.i(TAG, "Registered programmatic receivers (call + screen)")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to register programmatic receivers", e)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -313,6 +357,21 @@ class AgentService : Service() {
         overlayManager = null
         tts?.stop()
         tts?.shutdown()
+
+        // Unregister programmatic receivers
+        try {
+            incomingCallReceiver?.stop()
+            incomingCallReceiver = null
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to stop call receiver", e)
+        }
+        try {
+            screenReceiver?.let { unregisterReceiver(it) }
+            screenReceiver = null
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to unregister screen receiver", e)
+        }
+
         Log.i(TAG, "AgentService destroyed")
     }
 
