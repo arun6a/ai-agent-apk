@@ -1080,7 +1080,385 @@ class ToolExecutor(private val context: Context) {
                 }
                 ToolResult(true, "Modified rule id=$id")
             }
+
+            // === ACTIVITY TOOLS (Open specific screens inside other apps) ===
+
+            "openActivity" -> {
+                val pkg = (call.args["package"] as? String ?: call.args["pkg"] as? String)
+                    ?: return ToolResult(false, "missing package")
+                val activity = call.args["activity"] as? String
+                    ?: return ToolResult(false, "missing activity (full class name)")
+                try {
+                    val intent = android.content.Intent()
+                    intent.setClassName(pkg, activity)
+                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    context.startActivity(intent)
+                    delay(1500)
+                    val currentPkg = getCurrentForegroundPackage()
+                    ToolResult(currentPkg == pkg,
+                        if (currentPkg == pkg) "Opened $activity (foreground: $pkg)"
+                        else "Sent intent to $activity but foreground is $currentPkg")
+                } catch (e: Exception) {
+                    ToolResult(false, "openActivity($pkg/$activity) failed: ${e.message}")
+                }
+            }
+
+            "openDeepLink" -> {
+                val uri = call.args["uri"] as? String
+                    ?: return ToolResult(false, "missing uri")
+                val pkg = (call.args["package"] as? String ?: call.args["pkg"] as? String)
+                try {
+                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(uri))
+                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    if (pkg != null) intent.setPackage(pkg)
+                    context.startActivity(intent)
+                    delay(1500)
+                    ToolResult(true, "Opened deep link: $uri" + (if (pkg != null) " in $pkg" else ""))
+                } catch (e: Exception) {
+                    ToolResult(false, "openDeepLink($uri) failed: ${e.message}. App may not be installed or URI invalid.")
+                }
+            }
+
+            "openAppWithData" -> {
+                val pkg = (call.args["package"] as? String ?: call.args["pkg"] as? String)
+                    ?: return ToolResult(false, "missing package")
+                val uri = call.args["uri"] as? String
+                    ?: return ToolResult(false, "missing uri")
+                val action = (call.args["action"] as? String) ?: android.content.Intent.ACTION_VIEW
+                val mimeType = call.args["mimeType"] as? String
+                try {
+                    val intent = android.content.Intent(action, android.net.Uri.parse(uri))
+                    intent.setPackage(pkg)
+                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    if (mimeType != null) intent.type = mimeType
+                    context.startActivity(intent)
+                    delay(1500)
+                    val currentPkg = getCurrentForegroundPackage()
+                    ToolResult(currentPkg == pkg,
+                        "Opened $pkg with data $uri (foreground: $currentPkg)")
+                } catch (e: Exception) {
+                    ToolResult(false, "openAppWithData($pkg, $uri) failed: ${e.message}")
+                }
+            }
+
+            "searchInApp" -> {
+                val pkg = (call.args["package"] as? String ?: call.args["pkg"] as? String)
+                    ?: return ToolResult(false, "missing package")
+                val query = call.args["query"] as? String
+                    ?: return ToolResult(false, "missing query")
+                try {
+                    val searchIntent = when (pkg) {
+                        "com.google.android.youtube" -> {
+                            android.content.Intent(android.content.Intent.ACTION_VIEW,
+                                android.net.Uri.parse("https://www.youtube.com/results?search_query=${java.net.URLEncoder.encode(query, "UTF-8")}"))
+                                .setPackage(pkg)
+                        }
+                        "com.spotify.music" -> {
+                            android.content.Intent(android.content.Intent.ACTION_VIEW,
+                                android.net.Uri.parse("spotify:search:${java.net.URLEncoder.encode(query, "UTF-8")}"))
+                                .setPackage(pkg)
+                        }
+                        "com.instagram.android" -> {
+                            android.content.Intent(android.content.Intent.ACTION_VIEW,
+                                android.net.Uri.parse("https://www.instagram.com/explore/tags/${java.net.URLEncoder.encode(query, "UTF-8")}"))
+                                .setPackage(pkg)
+                        }
+                        "com.android.chrome" -> {
+                            android.content.Intent(android.content.Intent.ACTION_VIEW,
+                                android.net.Uri.parse("https://www.google.com/search?q=${java.net.URLEncoder.encode(query, "UTF-8")}"))
+                                .setPackage(pkg)
+                        }
+                        else -> {
+                            context.packageManager.getLaunchIntentForPackage(pkg)
+                                ?: return ToolResult(false, "App $pkg not installed")
+                        }
+                    }
+                    searchIntent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    context.startActivity(searchIntent)
+                    delay(2000)
+                    ToolResult(true, "Searched '$query' in $pkg")
+                } catch (e: Exception) {
+                    ToolResult(false, "searchInApp($pkg, $query) failed: ${e.message}")
+                }
+            }
+
+            "openWhatsAppChat" -> {
+                val phone = call.args["phone"] as? String
+                    ?: return ToolResult(false, "missing phone (international format, e.g. +919001234567)")
+                val message = call.args["message"] as? String
+                try {
+                    val uri = if (message != null) {
+                        "https://wa.me/$phone?text=${java.net.URLEncoder.encode(message, "UTF-8")}"
+                    } else {
+                        "https://wa.me/$phone"
+                    }
+                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(uri))
+                    intent.setPackage("com.whatsapp")
+                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    context.startActivity(intent)
+                    delay(2000)
+                    ToolResult(true, "Opened WhatsApp chat with $phone" + (if (message != null) " (message pre-filled)" else ""))
+                } catch (e: Exception) {
+                    ToolResult(false, "openWhatsAppChat($phone) failed: ${e.message}. WhatsApp may not be installed.")
+                }
+            }
+
+            "openYouTubeVideo" -> {
+                val videoId = call.args["videoId"] as? String
+                    ?: return ToolResult(false, "missing videoId")
+                try {
+                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW,
+                        android.net.Uri.parse("vnd.youtube://video/$videoId"))
+                    intent.setPackage("com.google.android.youtube")
+                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    context.startActivity(intent)
+                    delay(2000)
+                    ToolResult(true, "Opened YouTube video: $videoId")
+                } catch (e: Exception) {
+                    try {
+                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse("https://www.youtube.com/watch?v=$videoId"))
+                        intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                        context.startActivity(intent)
+                        delay(2000)
+                        ToolResult(true, "Opened YouTube video $videoId in browser (YouTube app not available)")
+                    } catch (e2: Exception) {
+                        ToolResult(false, "openYouTubeVideo($videoId) failed: ${e2.message}")
+                    }
+                }
+            }
+
+            "openMapsLocation" -> {
+                val query = call.args["query"] as? String
+                    ?: return ToolResult(false, "missing query")
+                val lat = call.args["lat"] as? Number
+                val lng = call.args["lng"] as? Number
+                try {
+                    val uri = if (lat != null && lng != null) {
+                        "geo:${lat},${lng}?q=${java.net.URLEncoder.encode(query, "UTF-8")}"
+                    } else {
+                        "geo:0,0?q=${java.net.URLEncoder.encode(query, "UTF-8")}"
+                    }
+                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(uri))
+                    intent.setPackage("com.google.android.apps.maps")
+                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    context.startActivity(intent)
+                    delay(2000)
+                    ToolResult(true, "Opened Maps: $query")
+                } catch (e: Exception) {
+                    ToolResult(false, "openMapsLocation($query) failed: ${e.message}. Google Maps may not be installed.")
+                }
+            }
+
+            "listAppActivities" -> {
+                val pkg = (call.args["package"] as? String ?: call.args["pkg"] as? String)
+                    ?: return ToolResult(false, "missing package")
+                try {
+                    val pm = context.packageManager
+                    val packageInfo = pm.getPackageInfo(pkg, android.content.pm.PackageManager.GET_ACTIVITIES)
+                    val activities = packageInfo.activities?.mapIndexed { i, info ->
+                        val exported = if (info.exported) " [exported]" else " [internal]"
+                        val name = info.name.substringAfterLast('.')
+                        "  ${i+1}. $name$exported"
+                    }?.joinToString("\n") ?: "No activities found"
+                    ToolResult(true, "Activities in $pkg:\n$activities")
+                } catch (e: Exception) {
+                    ToolResult(false, "listAppActivities($pkg) failed: ${e.message}. App may not be installed.")
+                }
+            }
+
+            "composeEmail" -> {
+                val to = call.args["to"] as? String
+                    ?: return ToolResult(false, "missing to (email address)")
+                val subject = call.args["subject"] as? String ?: ""
+                val body = call.args["body"] as? String ?: ""
+                try {
+                    val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO)
+                    intent.data = android.net.Uri.parse("mailto:")
+                    intent.putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf(to))
+                    intent.putExtra(android.content.Intent.EXTRA_SUBJECT, subject)
+                    intent.putExtra(android.content.Intent.EXTRA_TEXT, body)
+                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    intent.setPackage("com.google.android.gm")
+                    try {
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        intent.setPackage(null)
+                        context.startActivity(intent)
+                    }
+                    delay(1500)
+                    ToolResult(true, "Opened email composer: to=$to, subject=$subject")
+                } catch (e: Exception) {
+                    ToolResult(false, "composeEmail($to) failed: ${e.message}")
+                }
+            }
+
+            "playSpotify" -> {
+                val query = call.args["query"] as? String
+                    ?: return ToolResult(false, "missing query (song/artist name)")
+                try {
+                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW,
+                        android.net.Uri.parse("spotify:search:${java.net.URLEncoder.encode(query, "UTF-8")}"))
+                    intent.setPackage("com.spotify.music")
+                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    context.startActivity(intent)
+                    delay(2500)
+                    ToolResult(true, "Opened Spotify search for: $query. Tap the first result to play.")
+                } catch (e: Exception) {
+                    ToolResult(false, "playSpotify($query) failed: ${e.message}. Spotify may not be installed.")
+                }
+            }
+
+            "openInstagramProfile" -> {
+                val username = call.args["username"] as? String
+                    ?: return ToolResult(false, "missing username")
+                try {
+                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW,
+                        android.net.Uri.parse("https://www.instagram.com/$username/"))
+                    intent.setPackage("com.instagram.android")
+                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    context.startActivity(intent)
+                    delay(2000)
+                    ToolResult(true, "Opened Instagram profile: @$username")
+                } catch (e: Exception) {
+                    try {
+                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse("https://www.instagram.com/$username/"))
+                        intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                        context.startActivity(intent)
+                        delay(2000)
+                        ToolResult(true, "Opened Instagram profile @$username in browser (app not installed)")
+                    } catch (e2: Exception) {
+                        ToolResult(false, "openInstagramProfile($username) failed: ${e2.message}")
+                    }
+                }
+            }
+
+            "openTelegramChat" -> {
+                val username = call.args["username"] as? String
+                    ?: return ToolResult(false, "missing username")
+                try {
+                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW,
+                        android.net.Uri.parse("https://t.me/$username"))
+                    intent.setPackage("org.telegram.messenger")
+                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    context.startActivity(intent)
+                    delay(2000)
+                    ToolResult(true, "Opened Telegram chat with @$username")
+                } catch (e: Exception) {
+                    try {
+                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse("https://t.me/$username"))
+                        intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                        context.startActivity(intent)
+                        delay(2000)
+                        ToolResult(true, "Opened Telegram @$username in browser (app not installed)")
+                    } catch (e2: Exception) {
+                        ToolResult(false, "openTelegramChat($username) failed: ${e2.message}")
+                    }
+                }
+            }
+
+            "makePhoneCall" -> {
+                val number = call.args["number"] as? String
+                    ?: return ToolResult(false, "missing number")
+                try {
+                    val intent = android.content.Intent(android.content.Intent.ACTION_CALL,
+                        android.net.Uri.parse("tel:$number"))
+                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    context.startActivity(intent)
+                    delay(1000)
+                    ToolResult(true, "Calling $number...")
+                } catch (e: SecurityException) {
+                    val intent = android.content.Intent(android.content.Intent.ACTION_DIAL,
+                        android.net.Uri.parse("tel:$number"))
+                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    context.startActivity(intent)
+                    delay(1000)
+                    ToolResult(true, "Opened dialer with $number (CALL_PHONE permission not granted — tap call button)")
+                } catch (e: Exception) {
+                    ToolResult(false, "makePhoneCall($number) failed: ${e.message}")
+                }
+            }
+
+            "openGoogleSearch" -> {
+                val query = call.args["query"] as? String
+                    ?: return ToolResult(false, "missing query")
+                try {
+                    val intent = android.content.Intent(android.content.Intent.ACTION_WEB_SEARCH)
+                    intent.putExtra("query", query)
+                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    context.startActivity(intent)
+                    delay(1500)
+                    ToolResult(true, "Google search: $query")
+                } catch (e: Exception) {
+                    try {
+                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse("https://www.google.com/search?q=${java.net.URLEncoder.encode(query, "UTF-8")}"))
+                        intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                        context.startActivity(intent)
+                        delay(1500)
+                        ToolResult(true, "Opened Google search: $query (in browser)")
+                    } catch (e2: Exception) {
+                        ToolResult(false, "openGoogleSearch($query) failed: ${e2.message}")
+                    }
+                }
+            }
+
+            "openAppSettings" -> {
+                val pkg = (call.args["package"] as? String ?: call.args["pkg"] as? String)
+                    ?: return ToolResult(false, "missing package")
+                try {
+                    val intent = android.content.Intent(
+                        android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        android.net.Uri.parse("package:$pkg"))
+                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    context.startActivity(intent)
+                    delay(1500)
+                    ToolResult(true, "Opened app settings for $pkg")
+                } catch (e: Exception) {
+                    ToolResult(false, "openAppSettings($pkg) failed: ${e.message}")
+                }
+            }
+
+            "shareToApp" -> {
+                val pkg = (call.args["package"] as? String ?: call.args["pkg"] as? String)
+                    ?: return ToolResult(false, "missing package")
+                val text = call.args["text"] as? String
+                    ?: return ToolResult(false, "missing text")
+                try {
+                    val intent = android.content.Intent(android.content.Intent.ACTION_SEND)
+                    intent.type = "text/plain"
+                    intent.putExtra(android.content.Intent.EXTRA_TEXT, text)
+                    intent.setPackage(pkg)
+                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    context.startActivity(android.content.Intent.createChooser(intent, "Share to").apply {
+                        flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    })
+                    delay(1500)
+                    ToolResult(true, "Shared text to $pkg")
+                } catch (e: Exception) {
+                    ToolResult(false, "shareToApp($pkg) failed: ${e.message}. App may not support text sharing.")
+                }
+            }
+
             else -> ToolResult(false, "unknown tool: ${call.name}")
+        }
+    }
+
+    private fun getCurrentForegroundPackage(): String {
+        return try {
+            val activityManager = context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+            // For Android 5.0+ use UsageStatsManager (requires PACKAGE_USAGE_STATS permission)
+            // For now, use the accessibility service's tracked package
+            val service = AgentAccessibilityService.getInstance()
+            if (service != null) {
+                service.getCurrentForegroundPackage() ?: "unknown"
+            } else {
+                "unknown"
+            }
+        } catch (e: Exception) {
+            "unknown"
         }
     }
 

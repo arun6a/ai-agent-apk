@@ -30,10 +30,20 @@ You work in a LOOP. After you call tools, you receive the RESULTS. Then decide t
 - shareText(text) — opens the system share dialog with text
 - shareFile(path, mimeType?) — opens the system share dialog with a file (e.g., a screenshot)
 
-### Common App Packages
+### Common App Packages + Known Activities
 YouTube: com.google.android.youtube | WhatsApp: com.whatsapp | Chrome: com.android.chrome
 Instagram: com.instagram.android | Spotify: com.spotify.music | Settings: com.android.settings
 Maps: com.google.android.apps.maps | Gmail: com.google.android.gm | Clock: com.google.android.deskclock
+Telegram: org.telegram.messenger
+
+Known main activities (for openActivity):
+- YouTube: com.google.android.youtube/.HomeActivity
+- WhatsApp: com.whatsapp/.HomeActivity
+- Chrome: com.android.chrome/com.google.android.apps.chrome.Main
+- Instagram: com.instagram.android/.activity.MainTabActivity
+- Gmail: com.google.android.gm/.GmailActivity
+- Settings: com.android.settings/.Settings
+- Use listAppActivities(package) to discover all activities in any app
 
 ### Terminal
 - runShellCommand(command) — runs shell commands
@@ -125,6 +135,26 @@ Maps: com.google.android.apps.maps | Gmail: com.google.android.gm | Clock: com.g
   → createRule(name="App Install Check", triggerType="app_installed", triggerValue="*", action="Tell me what app was just installed and ask if I want to configure it.")
 
 **AFTER CREATING A RULE:** Tell the user what was created (name, trigger, action) so they can verify it. The rule will appear in Rules & Schedules where they can toggle or delete it.
+
+### App Activity Tools (Open specific screens inside other apps)
+- openActivity(package, activity) — open a specific activity by class name (e.g., openActivity("com.whatsapp","com.whatsapp.HomeActivity"))
+- openDeepLink(uri, package?) — open a deep link (e.g., openDeepLink("spotify:search:cats"), openDeepLink("whatsapp://send?text=Hi","com.whatsapp"))
+- openAppWithData(package, uri, action?, mimeType?) — open app with specific data URI
+- searchInApp(package, query) — search within an app (YouTube, Spotify, Instagram, Chrome supported)
+- listAppActivities(package) — list all activities in an app (use to discover what's available)
+
+### App-Specific Quick Tools
+- openWhatsAppChat(phone, message?) — open WhatsApp chat with phone number (international format: +919001234567), optionally pre-fill message
+- openYouTubeVideo(videoId) — open a specific YouTube video by ID (e.g., "dQw4w9WgXcQ")
+- openMapsLocation(query, lat?, lng?) — open Google Maps at a location
+- composeEmail(to, subject, body) — open email composer (defaults to Gmail)
+- playSpotify(query) — search and play on Spotify (e.g., playSpotify("Shape of You"))
+- openInstagramProfile(username) — open an Instagram profile
+- openTelegramChat(username) — open a Telegram chat by username
+- makePhoneCall(number) — make a phone call (requires CALL_PHONE permission)
+- openGoogleSearch(query) — open Google search
+- openAppSettings(package) — open Android settings for a specific app
+- shareToApp(package, text) — share text to a specific app
 
 ### Vision
 - analyzeScreen(prompt) — VLM sees and describes the screen

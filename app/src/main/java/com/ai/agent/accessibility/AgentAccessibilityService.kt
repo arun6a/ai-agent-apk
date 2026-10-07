@@ -51,8 +51,30 @@ class AgentAccessibilityService : AccessibilityService() {
         Log.i(TAG, "Accessibility service connected")
     }
 
-    override fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent?) {}
+    override fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent?) {
+        // Track the current foreground package
+        event?.let {
+            if (it.packageName != null && it.eventType == android.view.accessibility.AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+                currentForegroundPackage = it.packageName.toString()
+            }
+        }
+    }
     override fun onInterrupt() { Log.w(TAG, "Interrupted") }
+
+    private var currentForegroundPackage: String? = null
+
+    fun getCurrentForegroundPackage(): String? {
+        // Try to get from root window first (most reliable)
+        try {
+            val root = rootInActiveWindow
+            if (root != null && root.packageName != null) {
+                return root.packageName.toString()
+            }
+        } catch (e: Exception) {
+            // Fall through to tracked value
+        }
+        return currentForegroundPackage
+    }
 
     override fun onDestroy() {
         instance = null
