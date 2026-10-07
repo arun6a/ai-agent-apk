@@ -78,7 +78,7 @@ class LLMClient(private val context: Context) {
                 when (provider.id) {
                     "openrouter" -> {
                         requestBuilder.header("Authorization", "Bearer $apiKey")
-                        requestBuilder.header("HTTP-Referer", "https://preview-chat-c9aadfe1-a665-4f7c-8232-c9d14a73c0cb.space-z.ai")
+                        requestBuilder.header("HTTP-Referer", "https://github.com/arun6a/ai-agent-apk")
                         requestBuilder.header("X-Title", "AI Agent Phone")
                     }
                     "gemini" -> {

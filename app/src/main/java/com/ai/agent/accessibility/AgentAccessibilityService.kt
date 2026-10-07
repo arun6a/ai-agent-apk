@@ -2,9 +2,11 @@ package com.ai.agent.accessibility
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
+import android.content.Context
 import android.content.Intent
 import android.graphics.Path
 import android.graphics.Rect
+import android.provider.Settings
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 
@@ -14,7 +16,33 @@ class AgentAccessibilityService : AccessibilityService() {
         private const val TAG = "AgentA11y"
         private var instance: AgentAccessibilityService? = null
         fun getInstance(): AgentAccessibilityService? = instance
+
+        /**
+         * Returns true only if the in-memory instance is live.
+         * Use this for runtime tool access (e.g., getInstance()?.readScreen()).
+         */
         fun isRunning(): Boolean = instance != null
+
+        /**
+         * Returns true if the user has enabled this accessibility service
+         * in Android Settings → Accessibility. This is the SOURCE OF TRUTH for
+         * permission state — the in-memory `instance` is null at app launch
+         * until the system binds the service (race condition).
+         *
+         * Use this in permission-check UI flows (e.g., checkAllPermissions()).
+         */
+        fun isEnabled(context: Context): Boolean {
+            // Fast path: if the instance is live, it's definitely enabled.
+            if (instance != null) return true
+            // Slow path: query Android system setting.
+            val enabledServices = Settings.Secure.getString(
+                context.contentResolver,
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+            ) ?: return false
+            val serviceName = context.packageName + "/" +
+                AgentAccessibilityService::class.java.name
+            return enabledServices.contains(serviceName)
+        }
     }
 
     override fun onServiceConnected() {

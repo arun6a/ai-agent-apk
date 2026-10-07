@@ -10,6 +10,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import com.ai.agent.llm.AIProvider
 import com.ai.agent.storage.AgentDatabase
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -209,7 +210,7 @@ class SettingsActivity : AppCompatActivity() {
                 val body = """{"model":"glm-4.6","messages":[{"role":"user","content":"Say OK"}],"thinking":{"type":"disabled"}}"""
                     .toRequestBody("application/json".toMediaType())
                 val request = okhttp3.Request.Builder()
-                    .url("https://preview-chat-c9aadfe1-a665-4f7c-8232-c9d14a73c0cb.space-z.ai/api/llm/proxy")
+                    .url(AIProvider.getLlmProxyUrl(this))
                     .header("Content-Type", "application/json")
                     .post(body)
                     .build()

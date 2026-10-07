@@ -16,6 +16,7 @@ import android.widget.ImageButton
 import android.widget.Toast
 import com.ai.agent.R
 import com.ai.agent.accessibility.AgentAccessibilityService
+import com.ai.agent.llm.AIProvider
 import com.ai.agent.llm.LLMClient
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -311,7 +312,7 @@ class OverlayManager(private val context: Context) {
 
                 Log.i(TAG, "VLM: POST to /api/llm/vision")
                 val request = okhttp3.Request.Builder()
-                    .url("https://preview-chat-c9aadfe1-a665-4f7c-8232-c9d14a73c0cb.space-z.ai/api/llm/vision")
+                    .url(AIProvider.getVisionUrl(context))
                     .header("Content-Type", "application/json")
                     .post(body)
                     .build()
@@ -538,7 +539,7 @@ class OverlayManager(private val context: Context) {
 
                 Log.i(TAG, "STEP 2: POST to /api/llm/vision")
                 val request = okhttp3.Request.Builder()
-                    .url("https://preview-chat-c9aadfe1-a665-4f7c-8232-c9d14a73c0cb.space-z.ai/api/llm/vision")
+                    .url(AIProvider.getVisionUrl(context))
                     .header("Content-Type", "application/json")
                     .post(body)
                     .build()

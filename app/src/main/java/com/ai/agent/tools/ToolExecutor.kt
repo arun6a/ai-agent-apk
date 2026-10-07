@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.util.Log
 import com.ai.agent.accessibility.AgentAccessibilityService
 import com.ai.agent.browser.BrowserController
+import com.ai.agent.llm.AIProvider
 import com.ai.agent.llm.LLMClient
 import com.ai.agent.storage.AgentDatabase
 import kotlinx.coroutines.delay
@@ -511,13 +512,15 @@ class ToolExecutor(private val context: Context) {
                     val body = """{"query":"$query","num":5}"""
                         .toRequestBody("application/json".toMediaType())
                     val request = okhttp3.Request.Builder()
-                        .url("https://preview-chat-c9aadfe1-a665-4f7c-8232-c9d14a73c0cb.space-z.ai/api/web-search")
+                        .url(AIProvider.getWebSearchUrl(context))
                         .header("Content-Type", "application/json")
                         .post(body)
                         .build()
                     val response = client.newCall(request).execute()
-                    val responseBody = response.body?.string() ?: "[]"
-                    val json = org.json.JSONArray(responseBody)
+                    val responseBody = response.body?.string() ?: "{}"
+                    // Response shape: { query, count, results: [...] }
+                    val parsed = org.json.JSONObject(responseBody)
+                    val json = parsed.optJSONArray("results") ?: org.json.JSONArray()
                     val results = StringBuilder()
                     for (i in 0 until json.length()) {
                         val item = json.optJSONObject(i) ?: continue
@@ -892,7 +895,7 @@ class ToolExecutor(private val context: Context) {
                 val body = bodyStr.toRequestBody("application/json".toMediaType())
 
                 val request = okhttp3.Request.Builder()
-                    .url("https://preview-chat-c9aadfe1-a665-4f7c-8232-c9d14a73c0cb.space-z.ai/api/llm/vision")
+                    .url(AIProvider.getVisionUrl(context))
                     .header("Content-Type", "application/json")
                     .post(body)
                     .build()

@@ -171,7 +171,9 @@ class MainActivity : AppCompatActivity() {
     private fun checkAllPermissions() {
         val missing = mutableListOf<String>()
 
-        if (!AgentAccessibilityService.isRunning()) {
+        // Use isEnabled(this) which checks Android system settings, not just the
+        // in-memory instance (which is null at launch until onServiceConnected fires).
+        if (!AgentAccessibilityService.isEnabled(this)) {
             missing.add("Accessibility Service (required for screen control)")
         }
         if (!Settings.canDrawOverlays(this)) {

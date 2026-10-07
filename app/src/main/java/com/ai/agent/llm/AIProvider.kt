@@ -21,6 +21,7 @@ object AIProvider {
     private const val KEY_API_KEY = "api_key"
     private const val KEY_ENDPOINT = "endpoint"
     private const val KEY_MODEL = "model"
+    private const val KEY_PROXY_BASE_URL = "proxy_base_url"  // Sandbox base URL for vision/web-search proxy
 
     // === Provider presets ===
     data class ProviderInfo(
@@ -72,7 +73,7 @@ object AIProvider {
             name = "Z.ai Proxy (Sandbox)",
             description = "Uses the sandbox proxy. No API key needed, but the sandbox " +
                     "dev server must be running. GLM-4.6 model. 300 requests/day.",
-            defaultEndpoint = "https://preview-chat-c9aadfe1-a665-4f7c-8232-c9d14a73c0cb.space-z.ai/api/llm/proxy",
+            defaultEndpoint = "https://preview-chat-1855dd56-e3a8-4ac4-a21c-824fbab8e552.space-z.ai/api/llm/proxy",
             needsApiKey = false,
             models = listOf(
                 ModelInfo("glm-4.6", "GLM-4.6", "Z.ai's flagship model. Smart, supports tools."),
@@ -147,4 +148,34 @@ object AIProvider {
         if (!provider.needsApiKey) return true
         return getApiKey(context).isNotEmpty()
     }
+
+    // === Sandbox proxy base URL ===
+    // Used by tools (webSearch, analyzeScreen) that need a sandbox-side proxy
+    // because OpenRouter doesn't have free vision and we need Z.ai's VLM.
+    // The URL is configurable so users can point to their own sandbox without rebuilding.
+    //
+    // Default: current Z.ai Code sandbox URL.
+    // Set via setProxyBaseUrl() (e.g., from Settings).
+    val DEFAULT_PROXY_BASE_URL = "https://preview-chat-1855dd56-e3a8-4ac4-a21c-824fbab8e552.space-z.ai"
+
+    fun getProxyBaseUrl(context: Context): String {
+        return getPrefs(context).getString(KEY_PROXY_BASE_URL, DEFAULT_PROXY_BASE_URL)
+            ?: DEFAULT_PROXY_BASE_URL
+    }
+
+    fun setProxyBaseUrl(context: Context, url: String) {
+        getPrefs(context).edit().putString(KEY_PROXY_BASE_URL, url.trimEnd('/')).apply()
+    }
+
+    /** Full URL for the LLM proxy endpoint (POST /api/llm/proxy). */
+    fun getLlmProxyUrl(context: Context): String =
+        getProxyBaseUrl(context).trimEnd('/') + "/api/llm/proxy"
+
+    /** Full URL for the vision endpoint (POST /api/llm/vision). */
+    fun getVisionUrl(context: Context): String =
+        getProxyBaseUrl(context).trimEnd('/') + "/api/llm/vision"
+
+    /** Full URL for the web-search endpoint (POST /api/web-search). */
+    fun getWebSearchUrl(context: Context): String =
+        getProxyBaseUrl(context).trimEnd('/') + "/api/web-search"
 }
