@@ -1,0 +1,53 @@
+# Build History Index
+
+Per-version changelogs for `arun6a/ai-agent-apk`. Each file documents one released version with:
+- What changed
+- Files modified
+- Known issues (what's still broken)
+- Migration notes
+- Test cases
+- User feedback that drove the change
+
+**Why this exists:** If the sandbox restarts (memory wipe), a future AI takes over, or you forget what version did what — these notes are the source of truth. The git log shows *what* changed, but these notes explain *why* and *what's next*.
+
+## How to use
+
+### To find the current state
+1. Look at the latest version file below
+2. Or check `app/build.gradle.kts` for `versionName`
+3. Or run `git log --oneline -5` to see recent commits
+
+### To add a new version
+1. Copy `TEMPLATE.md` to `vX.Y.Z.md`
+2. Fill in all sections
+3. Update the table below
+4. Commit with message: `"vX.Y.Z: <short summary>"`
+
+## Version Index
+
+| Version | Released | versionCode | Headline | File |
+|---|---|---|---|---|
+| v2.2.1 | 2026-10-06 | 57 | Repo cleanup + HANDOFF.md | [v2.2.1.md](./v2.2.1.md) |
+| v2.2.2 | 2026-10-06 | 58 | Fix permission popup + configurable proxy URLs | [v2.2.2.md](./v2.2.2.md) |
+| v2.3.0 | 2026-10-07 | 59 | Fix agent brain — verify before claiming Done! | [v2.3.0.md](./v2.3.0.md) |
+| v2.3.1 | 2026-10-07 | 60 | Fix "Accessibility service not running" false negative | [v2.3.1.md](./v2.3.1.md) |
+| v2.4.0 | 2026-10-07 | 61 | Add Groq/Together providers, multi-provider VLM, smarter prompts | [v2.4.0.md](./v2.4.0.md) |
+| (template) | — | — | — | [TEMPLATE.md](./TEMPLATE.md) |
+
+## Quick History Summary
+
+**v2.2.x** — Cleanup + infrastructure fixes
+- v2.2.1: repo cleanup, removed build artifacts, added HANDOFF.md
+- v2.2.2: fixed permission popup race condition, made sandbox URLs configurable
+
+**v2.3.x** — Agent brain fixes
+- v2.3.0: no more batching tools, must verify before "Done!", CancellationException handling
+- v2.3.1: fixed "Accessibility service not running" — added waitForAccessibilityService() polling
+
+**v2.4.x** — Multi-provider expansion
+- v2.4.0: added Groq + Together providers, free OpenRouter vision models, multi-provider VLM routing, WhatsApp/YouTube UI tips in system prompt
+
+## File Naming Convention
+- `vMAJOR.MINOR.PATCH.md` — matches `versionName` from `app/build.gradle.kts`
+- All lowercase `v` prefix
+- Three-part version number

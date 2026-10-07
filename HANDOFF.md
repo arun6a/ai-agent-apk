@@ -9,12 +9,26 @@ This document explains the full project history, current state, and what NOT to 
 ## Project Overview
 
 **Repo**: https://github.com/arun6a/ai-agent-apk
-**Current Version**: v2.2.1 (versionCode 57)
+**Current Version**: v2.4.0 (versionCode 61)
 **Platform**: Android 7.0+ (API 24)
 **Language**: Kotlin
 **Build**: Gradle 8.10.2, JDK 17, Android SDK 34
 
 An autonomous AI agent app that controls an Android phone via voice/text. Uses cloud AI (OpenRouter/Gemini/Z.ai) for reasoning and executes 80+ tools on the device.
+
+---
+
+## 📚 Read the Build Notes First
+
+Per-version changelogs live in [`BUILDS/`](./BUILDS/README.md). Each version has:
+- What changed (features, fixes, refactors)
+- Files modified (with one-line descriptions)
+- Known issues (what's still broken)
+- Migration notes
+- Test cases
+- User feedback that drove the changes
+
+Start with the latest version file ([`BUILDS/v2.4.0.md`](./BUILDS/v2.4.0.md)) to understand current state, then work backwards if you need context on older changes.
 
 ---
 

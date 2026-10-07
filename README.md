@@ -2,16 +2,22 @@
 
 An autonomous AI agent that controls your Android phone via voice or text. Uses cloud AI (OpenRouter/Gemini/Z.ai) for reasoning and executes 80+ tools on your device.
 
-**Current version: v2.2.1** (versionCode 57)
+**Current version: v2.4.0** (versionCode 61)
+
+📖 **[Build History →](./BUILDS/README.md)** — per-version changelogs with what changed, why, known issues, and test cases. Start here if you're picking up the project fresh.
+
+🤝 **[Handoff Guide →](./HANDOFF.md)** — for AI assistants taking over this project. Includes architecture, "do NOT do these things", and build instructions.
 
 ## Features
 
 ### Multi-Provider AI Support
 Choose your AI provider in Settings — no rebuild needed:
-- **OpenRouter** (free, unlimited) — Nemotron 120B, Cohere, Poolside, Liquid
-- **Google Gemini** (free tier) — 2.0 Flash, 2.5 Flash, 1.5 Flash, 1.5 Pro
-- **Z.ai Proxy** (sandbox) — GLM-4.6, GLM-4 Flash
-- **Custom** — any OpenAI-compatible endpoint (OpenAI, Groq, Together, Ollama)
+- **OpenRouter** (free, unlimited) — Nemotron 120B, Gemma 4 31B (vision!), Cohere
+- **Groq** (ultra fast) — Llama 3.3 70B, Llama 3.2 11B Vision, Mixtral 8x7B
+- **Together AI** — Llama 3.3 70B Turbo, Llama 3.1 405B, Qwen 2.5 72B
+- **Google Gemini** (free tier) — 2.0 Flash (recommended), 2.5 Flash, 1.5 Flash, 1.5 Pro
+- **Z.ai Proxy** (sandbox, no API key needed) — GLM-4.6, GLM-4 Flash
+- **Custom** — any OpenAI-compatible endpoint (OpenAI, Ollama, LM Studio, vLLM)
 
 ### Voice Control
 - Speech-to-Text (Android SpeechRecognizer) — English + Tamil
@@ -111,11 +117,18 @@ app/src/main/java/com/ai/agent/
 - Build: Gradle 8.10.2
 
 ## Version History
-- v2.2.1 — Fixed launchApp arg name (accepts both "package" and "pkg")
-- v2.2.0 — Multi-provider support (OpenRouter/Gemini/Z.ai/Custom)
-- v1.9.0 — Removed local LLM, cloud-only
-- v1.4.0 — 70+ tools (terminal, contacts, SMS, calendar, files)
-- v1.0.0 — MVP with voice, accessibility, agent loop, vision
+
+See [BUILDS/README.md](./BUILDS/README.md) for detailed per-version changelogs.
+
+- **v2.4.0** — Added Groq + Together providers, free OpenRouter vision models, multi-provider VLM routing, WhatsApp/YouTube UI tips in system prompt
+- **v2.3.1** — Fixed "Accessibility service not running" false negative (waitForAccessibilityService polling)
+- **v2.3.0** — Agent brain fixes: no batching, must verify before "Done!", CancellationException handling
+- **v2.2.2** — Permission popup fix + configurable proxy URLs (no more hardcoded sandbox URLs)
+- **v2.2.1** — Repo cleanup (1.4GB → 476KB), added HANDOFF.md
+- **v2.2.0** — Multi-provider support (OpenRouter/Gemini/Z.ai/Custom)
+- **v1.9.0** — Removed local LLM, cloud-only
+- **v1.4.0** — 70+ tools (terminal, contacts, SMS, calendar, files)
+- **v1.0.0** — MVP with voice, accessibility, agent loop, vision
 
 ## Links
 - GitHub: https://github.com/arun6a/ai-agent-apk
