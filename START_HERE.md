@@ -5,11 +5,11 @@
 ## Quick Summary
 
 This is an **Android AI Agent app** (Kotlin) that controls a phone via voice/text.
-- **Current version**: v3.3.0 (versionCode 68)
+- **Current version**: v3.4.0 (versionCode 71)
 - **Repo**: https://github.com/arun6a/ai-agent-apk
 - **APK**: Cloud-only (no local LLM), ~6.6 MB
 
-## What's New in v3.3.0 (latest)
+## What's New in v3.4.0 (latest)
 
 ### 1. API Usage Tracker (NEW)
 - `ApiUsageTracker.kt` tracks calls + tokens per task/session/day
@@ -17,7 +17,7 @@ This is an **Android AI Agent app** (Kotlin) that controls a phone via voice/tex
 - Full report in Settings → API Usage Monitor
 - Works with OpenAI format AND Gemini format
 
-### 2. Batching Enabled (v3.2.2, kept in v3.3.0)
+### 2. Batching Rules (v3.3.2)
 - System prompt now says "BATCH independent tools"
 - Reduces API calls from 5-6 to 2-3 per task
 - CRITICAL: Do NOT revert to "DO NOT batch"
@@ -47,7 +47,7 @@ export ANDROID_HOME=/path/to/android-sdk
 | File | Purpose |
 |------|---------|
 | `HANDOFF.md` | Full project guide (READ THIS) |
-| `BUILDS/v3.3.0.md` | Latest build details |
+| `BUILDS/v3.4.0.md` | Latest build details |
 | `app/src/main/assets/system_prompt.txt` | The AI's brain — all tools + rules |
 | `app/src/main/java/com/ai/agent/llm/AIProvider.kt` | 6 providers config |
 | `app/src/main/java/com/ai/agent/llm/LLMClient.kt` | Multi-provider chat client |

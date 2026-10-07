@@ -11,7 +11,7 @@ This document explains the full project history, current state, architecture, an
 ## Project Overview
 
 **Repo**: https://github.com/arun6a/ai-agent-apk
-**Current Version**: v3.3.0 (versionCode 68)
+**Current Version**: v3.4.0 (versionCode 71)
 **Platform**: Android 7.0+ (API 24)
 **Language**: Kotlin
 **Build**: Gradle 8.10.2, JDK 17, Android SDK 34
@@ -32,8 +32,10 @@ An autonomous AI agent app that controls an Android phone via voice/text. Uses c
 | v2.4.0 | Add Groq/Together providers, multi-provider VLM | Sandbox 2 |
 | v3.0.0 | Proactive Assistant — AI-driven rules + AlarmManager | Sandbox 2 |
 | v3.1.0 | 9 new event triggers + BootReceiver + new tools | Sandbox 2 |
-| v3.2.2 | Batching enabled (was DO NOT batch → now BATCH independent) | Sandbox 1 |
-| **v3.3.0** | **API usage monitor + 128K context optimization** | **Sandbox 1** |
+| v3.3.0 | API usage monitor + batching + 128K context optimization | Sandbox 1 |
+| v3.3.1 | Fix Gemini URL construction (HTML error) | Sandbox 1 |
+| v3.3.2 | Fix batching — read-only only, never batch actions | Sandbox 1 |
+| **v3.4.0** | **15 new activity tools (openActivity, openDeepLink, etc.)** | **Sandbox 1** |
 
 ---
 
