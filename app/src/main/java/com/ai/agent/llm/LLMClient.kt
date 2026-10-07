@@ -11,6 +11,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
+import com.ai.agent.llm.ApiUsageTracker
 
 /**
  * LLM client that supports multiple AI providers:
@@ -195,6 +196,20 @@ class LLMClient(private val context: Context) {
      */
     private fun parseOpenAIResponse(responseBody: String): String {
         val json = JSONObject(responseBody)
+        
+        // Track token usage
+        try {
+            val usage = json.optJSONObject("usage")
+            if (usage != null) {
+                val promptTokens = usage.optInt("prompt_tokens", 0)
+                val completionTokens = usage.optInt("completion_tokens", 0)
+                val provider = AIProvider.getProviderId(context)
+                ApiUsageTracker.recordCall(context, promptTokens, completionTokens, provider)
+            }
+        } catch (e: Exception) {
+            Log.w("LLMClient", "Could not parse usage: ${e.message}")
+        }
+        
         return json
             .optJSONArray("choices")
             ?.optJSONObject(0)
@@ -208,6 +223,19 @@ class LLMClient(private val context: Context) {
      */
     private fun parseGeminiResponse(responseBody: String): String {
         val json = JSONObject(responseBody)
+        
+        // Track token usage (Gemini returns usageMetadata)
+        try {
+            val usage = json.optJSONObject("usageMetadata")
+            if (usage != null) {
+                val promptTokens = usage.optInt("promptTokenCount", 0)
+                val completionTokens = usage.optInt("candidatesTokenCount", 0)
+                ApiUsageTracker.recordCall(context, promptTokens, completionTokens, "gemini")
+            }
+        } catch (e: Exception) {
+            Log.w("LLMClient", "Could not parse Gemini usage: ${e.message}")
+        }
+        
         val candidates = json.optJSONArray("candidates")
         val content = candidates
             ?.optJSONObject(0)

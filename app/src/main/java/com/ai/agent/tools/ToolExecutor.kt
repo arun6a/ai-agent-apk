@@ -117,7 +117,7 @@ class ToolExecutor(private val context: Context) {
                 // (button labels, icons' content descriptions, menu items) and decide what to click.
                 // Capped at 3000 chars to keep the LLM context manageable.
                 val screenText = try { service.readScreen() } catch (e: Exception) { "(readScreen failed: ${e.message})" }
-                val finalScreen = if (screenText.length > 3000) screenText.take(3000) + "\n...[truncated]" else screenText
+                val finalScreen = if (screenText.length > 1500) screenText.take(1500) + "\n...[truncated]" else screenText
                 ToolResult(
                     true,
                     "launchApp($pkg) — launched. After 2.5s, screen content:\n\n$finalScreen"

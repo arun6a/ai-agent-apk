@@ -23,6 +23,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.ai.agent.accessibility.AgentAccessibilityService
 import com.ai.agent.databinding.ActivityMainBinding
 import com.ai.agent.llm.LLMClient
+import com.ai.agent.llm.ApiUsageTracker
 import com.ai.agent.service.AgentService
 import com.ai.agent.service.OverlayManager
 import com.ai.agent.storage.AgentDatabase
@@ -51,8 +52,8 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val REQUEST_RECORD_AUDIO = 100
-        private const val MAX_ITERATIONS = 25           // more headroom for complex tasks
-        private const val MAX_REPEATED_TOOLS = 3        // if same tool+args called N times, stop (infinite loop guard)
+        private const val MAX_ITERATIONS = 50           // more headroom for complex tasks
+        private const val MAX_REPEATED_TOOLS = 3  // batch independent tools to save API calls        // if same tool+args called N times, stop (infinite loop guard)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,7 +73,7 @@ class MainActivity : AppCompatActivity() {
         binding.messagesList.adapter = adapter
 
         // Load conversation history from database
-        val history = database.getRecentConversations(50)
+        val history = database.getRecentConversations(30)
         if (history.isNotEmpty()) {
             for ((role, text) in history) {
                 adapter.addMessage(ChatMessage(
@@ -317,7 +318,7 @@ class MainActivity : AppCompatActivity() {
 
             // Reload chat history to catch any messages saved while in background
             // (e.g., voice commands processed by the overlay)
-            val history = database.getRecentConversations(50)
+            val history = database.getRecentConversations(30)
             if (history.isNotEmpty()) {
                 // Check if there are new messages since last load
                 val lastMsg = if (adapter.itemCount > 0) {
@@ -581,12 +582,12 @@ class MainActivity : AppCompatActivity() {
 
             // Build conversation with recent history (last 6 messages)
             val conversation = StringBuilder()
-            val history = database.getRecentConversations(6)
+            val history = database.getRecentConversations(4)
             if (history.isNotEmpty()) {
                 conversation.append("[Recent conversation history:\n")
                 for ((role, text) in history) {
                     conversation.append(if (role == "user") "User: " else "AI: ")
-                    conversation.append(text.take(200))  // truncate long messages
+                    conversation.append(text.take(150))  // truncate long messages
                     conversation.append("\n")
                 }
                 conversation.append("]\n\n")
@@ -599,6 +600,8 @@ class MainActivity : AppCompatActivity() {
             var finalReply = ""
             var iteration = 0
             // (workLog declared above try{} so catch can read it)
+
+            ApiUsageTracker.startNewTask()
 
             while (iteration < MAX_ITERATIONS && !stopRequested) {
                 iteration++
@@ -657,7 +660,8 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 // Show iteration progress in the chat
-                adapter.updateLastMessage("[$iteration/$MAX_ITERATIONS] $workLog")
+                val callCount = ApiUsageTracker.getTaskCalls()
+                adapter.updateLastMessage("[$iteration/$MAX_ITERATIONS] [API: $callCount calls] $workLog")
 
                 // Append results to conversation for the next LLM call
                 conversation.append("\n\n[Tool results from step $iteration]:")
@@ -665,9 +669,9 @@ class MainActivity : AppCompatActivity() {
                 conversation.append("\nBased on these results, decide the next step. If the task is complete, reply with just the final message and no tool_calls. If a step failed, try a DIFFERENT approach (don't repeat the same action). If you need to verify, call readScreen().")
 
                 // Trim old history to prevent conversation from growing too long
-                if (conversation.length > 4000) {
+                if (conversation.length > 8000) {
                     val originalMsg = userMessage
-                    val recentHistory = conversation.substring(conversation.length - 3000)
+                    val recentHistory = conversation.substring(conversation.length - 6000)
                     conversation.clear()
                     conversation.append(originalMsg)
                     conversation.append("\n\n[Previous steps omitted. Most recent steps:]")

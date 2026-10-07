@@ -99,6 +99,25 @@ class SettingsActivity : AppCompatActivity() {
             setOnClickListener { testAPI() }
         })
 
+        // === API Usage ===
+        layout.addView(SectionTitle("API Usage Monitor"))
+        val usageReport = com.ai.agent.llm.ApiUsageTracker.getFullReport(this)
+        layout.addView(InfoText(usageReport))
+        layout.addView(Button(this).apply {
+            text = "🔄 Refresh Usage Stats"
+            setOnClickListener {
+                recreate()
+            }
+        })
+        layout.addView(Button(this).apply {
+            text = "🗑️ Reset All Usage Stats"
+            setOnClickListener {
+                com.ai.agent.llm.ApiUsageTracker.resetAll(this@SettingsActivity)
+                Toast.makeText(this@SettingsActivity, "Usage stats reset", Toast.LENGTH_SHORT).show()
+                recreate()
+            }
+        })
+
         // === Memory ===
         layout.addView(SectionTitle("Memory"))
         val memoryCount = database.getAllMemory().size
