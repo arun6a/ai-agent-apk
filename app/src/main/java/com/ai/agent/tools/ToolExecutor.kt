@@ -65,7 +65,19 @@ class ToolExecutor(private val context: Context) {
             }
             "type" -> {
                 val text = call.args["text"] as? String ?: return ToolResult(false, "missing text")
-                ToolResult(service.type(text), "type($text)")
+                // First, check what app is currently foreground so we don't accidentally type
+                // into the AI Agent's own chat input.
+                val am = context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+                val currentPkg = am.runningAppProcesses?.firstOrNull { it.importance == android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND }?.processName ?: "unknown"
+                if (currentPkg == "com.ai.agent") {
+                    // We're about to type into our own app. Try to dismiss focus by hiding keyboard
+                    // and pressing back a couple of times — this is a recovery path.
+                    android.util.Log.w(TAG, "type() called while AI Agent is foreground — likely a launchApp didn't complete. Attempting recovery.")
+                    return ToolResult(false, "type($text) ABORTED: AI Agent app is still foreground. The previous launchApp did not complete. Try calling launchApp again, then readScreen() to verify.")
+                }
+                val typed = service.type(text)
+                delay(400)  // let the IME settle
+                ToolResult(typed, "type($text) on $currentPkg")
             }
             "swipe" -> {
                 val x1 = (call.args["x1"] as? Number)?.toFloat() ?: return ToolResult(false, "missing x1")
@@ -79,11 +91,37 @@ class ToolExecutor(private val context: Context) {
             "pressBack" -> ToolResult(service.pressBack(), "pressBack")
             "pressHome" -> ToolResult(service.pressHome(), "pressHome")
             "pressEnter" -> ToolResult(service.pressEnter(), "pressEnter")
-            "submitInput" -> ToolResult(service.submitInput(), "submitInput")
+            "submitInput" -> {
+                // Same AI-Agent-foreground guard as type() — don't submit our own chat input.
+                val am = context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+                val currentPkg = am.runningAppProcesses?.firstOrNull { it.importance == android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND }?.processName ?: "unknown"
+                if (currentPkg == "com.ai.agent") {
+                    android.util.Log.w(TAG, "submitInput() called while AI Agent is foreground — aborting to prevent sending our own chat.")
+                    return ToolResult(false, "submitInput ABORTED: AI Agent is foreground. launchApp didn't complete. Try again with launchApp + readScreen first.")
+                }
+                val submitted = service.submitInput()
+                delay(800)  // wait for navigation/results to load
+                ToolResult(submitted, "submitInput on $currentPkg")
+            }
             "launchApp" -> {
                 val pkg = (call.args["package"] as? String ?: call.args["pkg"] as? String)
                     ?: return ToolResult(false, "missing package")
-                ToolResult(service.launchApp(pkg), "launchApp($pkg)")
+                val launched = service.launchApp(pkg)
+                if (!launched) return ToolResult(false, "launchApp($pkg) failed — startActivity returned false")
+                // Wait for the app to actually come to foreground before returning.
+                // Without this, the next tool (e.g., type) runs against the PREVIOUS foreground app
+                // (often the AI Agent's own UI), which is the source of the "BLACKPINK got typed
+                // into chat" bug.
+                delay(2000)  // give the home launcher + target app time to swap
+                // Verify by reading the screen — if we see the AI Agent's own chat UI, the launch
+                // didn't take. We don't hard-fail here because some apps show splash screens
+                // with no text, but at least we surface what's actually visible.
+                val screenText = try { service.readScreen() } catch (e: Exception) { "" }
+                val shortScreen = if (screenText.length > 200) screenText.take(200) + "..." else screenText
+                ToolResult(
+                    true,
+                    "launchApp($pkg) — launched. After 2s, screen shows: $shortScreen"
+                )
             }
             "listInstalledApps" -> ToolResult(true, getInstalledApps())
             "wait" -> {

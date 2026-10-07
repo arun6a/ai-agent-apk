@@ -169,6 +169,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkAllPermissions() {
+        // Only show the popup on first launch, OR if explicitly requested via "Check Permissions" menu.
+        // Showing it on every onResume() is annoying and makes the popup feel like a bug.
+        // The user can manually trigger via the menu (or "Settings → Check Permissions").
+        val prefs = getSharedPreferences("ai_agent_ui", MODE_PRIVATE)
+        val firstLaunch = prefs.getBoolean("first_launch_done", false)
+        if (firstLaunch) return  // don't nag the user every resume
+        prefs.edit().putBoolean("first_launch_done", true).apply()
+
+        showPermissionSetupDialog()
+    }
+
+    /**
+     * Public method — called when user taps "Check Permissions" in the menu.
+     * Always shows the dialog regardless of first-launch state.
+     */
+    fun showPermissionSetupDialog() {
         val missing = mutableListOf<String>()
 
         // Use isEnabled(this) which checks Android system settings, not just the
@@ -336,7 +352,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateAccessibilityStatus() {
-        val enabled = AgentAccessibilityService.isRunning()
+        // Use isEnabled(this) which checks the system setting (true source of state),
+        // not isRunning() which is null at launch until onServiceConnected fires.
+        val enabled = AgentAccessibilityService.isEnabled(this)
         binding.statusText.text = if (enabled) "Connected • Accessibility ON" else "Accessibility OFF"
         binding.statusDot.setBackgroundResource(
             if (enabled) R.drawable.status_dot else R.drawable.status_dot_off
@@ -538,6 +556,8 @@ class MainActivity : AppCompatActivity() {
      * - Stops when task is complete OR max iterations OR infinite loop detected OR user stops
      */
     private suspend fun runAgentLoop(userMessage: String) {
+        // Hoisted out of try{} so the catch block can reference it for partial-progress reports.
+        var workLog = StringBuilder()
         try {
             val basePrompt = assets.open("system_prompt.txt").bufferedReader().use { it.readText() }
 
@@ -569,7 +589,7 @@ class MainActivity : AppCompatActivity() {
 
             var finalReply = ""
             var iteration = 0
-            var workLog = StringBuilder()
+            // (workLog declared above try{} so catch can read it)
 
             while (iteration < MAX_ITERATIONS && !stopRequested) {
                 iteration++
@@ -663,6 +683,14 @@ class MainActivity : AppCompatActivity() {
             database.logAction("Processed: $userMessage → $finalReply")  // Log action
             voiceManager.speak(finalReply.take(500), currentLang)
 
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // User started a new message or pressed stop — not a real error
+            if (!stopRequested) {
+                val msg = "Task interrupted (a new message was sent or the task was stopped). Last progress:\n$workLog"
+                adapter.updateLastMessage(msg)
+                database.addConversation("ai", msg)
+            }
+            throw e  // re-throw so the parent coroutine machinery knows
         } catch (e: Exception) {
             if (!stopRequested) {
                 adapter.updateLastMessage("Error: ${e.message}")
