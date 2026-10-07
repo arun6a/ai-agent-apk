@@ -71,8 +71,15 @@ class LLMClient(private val context: Context) {
                     else -> buildOpenAIRequest(model, userMessage, systemPrompt, provider.id)
                 }
 
+                // For Gemini, construct the full URL with model + API key
+                val finalUrl = if (provider.id == "gemini") {
+                    "$endpoint/models/$model:generateContent?key=$apiKey"
+                } else {
+                    endpoint
+                }
+
                 val requestBuilder = Request.Builder()
-                    .url(endpoint)
+                    .url(finalUrl)
                     .header("Content-Type", "application/json")
 
                 // Add auth headers based on provider
