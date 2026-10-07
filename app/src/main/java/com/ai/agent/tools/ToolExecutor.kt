@@ -112,15 +112,15 @@ class ToolExecutor(private val context: Context) {
                 // Without this, the next tool (e.g., type) runs against the PREVIOUS foreground app
                 // (often the AI Agent's own UI), which is the source of the "BLACKPINK got typed
                 // into chat" bug.
-                delay(2000)  // give the home launcher + target app time to swap
-                // Verify by reading the screen — if we see the AI Agent's own chat UI, the launch
-                // didn't take. We don't hard-fail here because some apps show splash screens
-                // with no text, but at least we surface what's actually visible.
-                val screenText = try { service.readScreen() } catch (e: Exception) { "" }
-                val shortScreen = if (screenText.length > 200) screenText.take(200) + "..." else screenText
+                delay(2500)  // give the home launcher + target app time to swap
+                // Return FULL screen text (not truncated) so the LLM can see actual UI elements
+                // (button labels, icons' content descriptions, menu items) and decide what to click.
+                // Capped at 3000 chars to keep the LLM context manageable.
+                val screenText = try { service.readScreen() } catch (e: Exception) { "(readScreen failed: ${e.message})" }
+                val finalScreen = if (screenText.length > 3000) screenText.take(3000) + "\n...[truncated]" else screenText
                 ToolResult(
                     true,
-                    "launchApp($pkg) — launched. After 2s, screen shows: $shortScreen"
+                    "launchApp($pkg) — launched. After 2.5s, screen content:\n\n$finalScreen"
                 )
             }
             "listInstalledApps" -> ToolResult(true, getInstalledApps())
@@ -906,6 +906,12 @@ class ToolExecutor(private val context: Context) {
     /**
      * Takes a screenshot and sends it to the VLM with a prompt.
      * Returns the VLM's text description of the screen.
+     *
+     * Provider routing:
+     * - If current provider is OpenRouter + vision-capable model → call OpenRouter directly
+     * - If current provider is Groq + vision-capable model → call Groq directly
+     * - If current provider is Gemini → call Gemini directly (all Gemini models are vision-capable)
+     * - Else (Z.ai proxy, custom, non-vision models) → fall back to sandbox /api/llm/vision
      */
     private suspend fun analyzeScreenWithVLM(prompt: String): String {
         val service = waitForAccessibilityService()
@@ -924,26 +930,50 @@ class ToolExecutor(private val context: Context) {
 
         Log.d(TAG, "Sending screenshot to VLM: ${screenshotBase64.length} chars")
 
-        // Call VLM via proxy
+        // Decide where to send the request based on current provider + model
+        val provider = AIProvider.getCurrentProvider(context)
+        val model = AIProvider.getModel(context)
+        val apiKey = AIProvider.getApiKey(context)
+
+        val isVisionModel = isVisionCapableModel(provider.id, model)
+        Log.d(TAG, "VLM routing: provider=${provider.id}, model=$model, isVisionModel=$isVisionModel")
+
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             try {
-                val jsonMediaType = "application/json".toMediaType()
-                val bodyStr = """{"model":"glm-4v","messages":[{"role":"user","content":[{"type":"text","text":"$prompt"},{"type":"image_url","image_url":{"url":"data:image/jpeg;base64,$screenshotBase64"}}]}]}"""
-                
+                val escapedPrompt = prompt.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")
+                val bodyStr = """{"model":"$model","messages":[{"role":"user","content":[{"type":"text","text":"$escapedPrompt"},{"type":"image_url","image_url":{"url":"data:image/jpeg;base64,$screenshotBase64"}}]}]}"""
                 val body = bodyStr.toRequestBody("application/json".toMediaType())
 
-                val request = okhttp3.Request.Builder()
-                    .url(AIProvider.getVisionUrl(context))
+                val requestBuilder = okhttp3.Request.Builder()
                     .header("Content-Type", "application/json")
-                    .post(body)
-                    .build()
 
+                when {
+                    // OpenRouter with a vision model → call OpenRouter directly
+                    provider.id == "openrouter" && isVisionModel -> {
+                        requestBuilder.url(provider.defaultEndpoint)
+                        requestBuilder.header("Authorization", "Bearer $apiKey")
+                        requestBuilder.header("HTTP-Referer", "https://github.com/arun6a/ai-agent-apk")
+                        requestBuilder.header("X-Title", "AI Agent Phone")
+                    }
+                    // Groq with vision model → call Groq directly
+                    provider.id == "groq" && isVisionModel -> {
+                        requestBuilder.url(provider.defaultEndpoint)
+                        requestBuilder.header("Authorization", "Bearer $apiKey")
+                    }
+                    // Gemini → use sandbox proxy (Gemini's multimodal format is different — TODO)
+                    // Z.ai proxy, custom, or non-vision models → use sandbox proxy
+                    else -> {
+                        requestBuilder.url(AIProvider.getVisionUrl(context))
+                    }
+                }
+
+                val request = requestBuilder.post(body).build()
                 val response = visionClient.newCall(request).execute()
                 val responseBody = response.body?.string() ?: ""
 
                 if (!response.isSuccessful) {
-                    Log.e(TAG, "VLM error ${response.code}: ${responseBody.take(200)}")
-                    return@withContext "VLM error: ${response.code}"
+                    Log.e(TAG, "VLM error ${response.code}: ${responseBody.take(300)}")
+                    return@withContext "VLM error: ${response.code}. Body: ${responseBody.take(200)}"
                 }
 
                 val json = org.json.JSONObject(responseBody)
@@ -960,6 +990,25 @@ class ToolExecutor(private val context: Context) {
                 Log.e(TAG, "VLM call failed", e)
                 "Vision error: ${e.message}"
             }
+        }
+    }
+
+    /**
+     * Check if a (providerId, modelName) combo is vision-capable.
+     * Conservative heuristic — when in doubt, return false (fall back to sandbox proxy).
+     */
+    private fun isVisionCapableModel(providerId: String, model: String): Boolean {
+        val m = model.lowercase()
+        return when (providerId) {
+            "openrouter" -> {
+                m.contains("gemma-4") || m.contains("nemotron-3-nano-omni") ||
+                m.contains("vision") || m.contains("vl") || m.contains("llava") ||
+                m.contains("qwen2.5-vl") || m.contains("qwen2-vl")
+            }
+            "groq" -> m.contains("vision")
+            "gemini" -> true  // all Gemini models are vision-capable
+            "together" -> m.contains("vision") || m.contains("vl") || m.contains("llava")
+            else -> false  // zai, custom → use sandbox proxy
         }
     }
 

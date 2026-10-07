@@ -81,6 +81,10 @@ class LLMClient(private val context: Context) {
                         requestBuilder.header("HTTP-Referer", "https://github.com/arun6a/ai-agent-apk")
                         requestBuilder.header("X-Title", "AI Agent Phone")
                     }
+                    "groq", "together" -> {
+                        // Groq + Together use OpenAI-compatible auth (Bearer token, no extra headers)
+                        requestBuilder.header("Authorization", "Bearer $apiKey")
+                    }
                     "gemini" -> {
                         // Gemini uses query param, not header — handled in endpoint
                     }

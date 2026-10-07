@@ -49,9 +49,39 @@ object AIProvider {
             needsApiKey = true,
             models = listOf(
                 ModelInfo("nvidia/nemotron-3-super-120b-a12b:free", "Nemotron 120B (Best)", "120B params, very capable, supports tool calling. Free."),
+                ModelInfo("google/gemma-4-31b-it:free", "Gemma 4 31B (Vision!)", "31B Google model. VISION-capable — can analyze screenshots. Free."),
+                ModelInfo("nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", "Nemotron Omni 30B (Vision+Audio)", "30B NVIDIA. VISION + AUDIO. Free."),
                 ModelInfo("cohere/north-mini-code:free", "Cohere North Mini", "Good for coding tasks. Free."),
-                ModelInfo("poolside/laguna-s-2.1:free", "Poolside Laguna S", "General purpose. Free."),
                 ModelInfo("liquid/lfm-2.5-2.6b:free", "Liquid LFM 2.5 2.6B", "Very fast, small. Free.")
+            )
+        ),
+        ProviderInfo(
+            id = "groq",
+            name = "Groq (Ultra Fast)",
+            description = "Ultra-fast LLM inference on custom hardware (LPU). " +
+                    "Free tier: 30 req/min, 14400/day. Get key at console.groq.com/keys",
+            defaultEndpoint = "https://api.groq.com/openai/v1/chat/completions",
+            needsApiKey = true,
+            models = listOf(
+                ModelInfo("llama-3.3-70b-versatile", "Llama 3.3 70B (Recommended)", "Meta's 70B model. Smart, capable. Free tier."),
+                ModelInfo("llama-3.1-8b-instant", "Llama 3.1 8B Instant", "Very fast, good for chat. Free tier."),
+                ModelInfo("llama-3.2-11b-vision-preview", "Llama 3.2 11B Vision (Vision!)", "VISION-capable — can analyze screenshots. Free."),
+                ModelInfo("llama-3.2-90b-vision-preview", "Llama 3.2 90B Vision", "Most capable Groq vision model. Free."),
+                ModelInfo("mixtral-8x7b-32768", "Mixtral 8x7B", "MoE model, fast. 32k context. Free.")
+            )
+        ),
+        ProviderInfo(
+            id = "together",
+            name = "Together AI",
+            description = "Many open-source models (Llama, Qwen, Mistral). " +
+                    "$5 free credit on signup. Get key at api.together.xyz/settings/api-keys",
+            defaultEndpoint = "https://api.together.xyz/v1/chat/completions",
+            needsApiKey = true,
+            models = listOf(
+                ModelInfo("meta-llama/Llama-3.3-70B-Instruct-Turbo", "Llama 3.3 70B Turbo", "Fast, capable. Paid."),
+                ModelInfo("meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo", "Llama 3.1 405B", "Most capable. Paid."),
+                ModelInfo("Qwen/Qwen2.5-72B-Instruct-Turbo", "Qwen 2.5 72B", "Great for coding. Paid."),
+                ModelInfo("meta-llama/Llama-Vision-Free", "Llama Vision (Free)", "VISION-capable. Free.")
             )
         ),
         ProviderInfo(
@@ -62,7 +92,7 @@ object AIProvider {
             defaultEndpoint = "https://generativelanguage.googleapis.com/v1beta",
             needsApiKey = true,
             models = listOf(
-                ModelInfo("gemini-2.0-flash", "Gemini 2.0 Flash", "Fast, capable, good for most tasks. Free tier."),
+                ModelInfo("gemini-2.0-flash", "Gemini 2.0 Flash (Recommended)", "Fast, capable, vision-capable. Free tier."),
                 ModelInfo("gemini-2.5-flash", "Gemini 2.5 Flash", "Newer, smarter. Free tier."),
                 ModelInfo("gemini-1.5-flash", "Gemini 1.5 Flash", "Stable, fast. Free tier."),
                 ModelInfo("gemini-1.5-pro", "Gemini 1.5 Pro", "Most capable, slower. Free tier.")
@@ -84,12 +114,12 @@ object AIProvider {
             id = "custom",
             name = "Custom (OpenAI-compatible)",
             description = "Use any OpenAI-compatible API. Enter endpoint, API key, and model name. " +
-                    "Works with OpenAI, Together, Groq, Mistral, Ollama, etc.",
+                    "Works with: OpenAI, Ollama, LM Studio, vLLM, etc.",
             defaultEndpoint = "",
             needsApiKey = true,
             models = listOf(
                 ModelInfo("gpt-4o-mini", "GPT-4o mini", "OpenAI's cheap model. Requires OpenAI API key."),
-                ModelInfo("llama-3.3-70b", "Llama 3.3 70B", "Meta's Llama. Use with Groq/Together."),
+                ModelInfo("llama-3.3-70b", "Llama 3.3 70B", "Meta's Llama. Use with any OpenAI-compatible server."),
                 ModelInfo("custom", "Custom Model", "Enter your model name in the model field.")
             )
         )

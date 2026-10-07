@@ -81,17 +81,39 @@ If task is complete, use empty tool_calls: []
 1. Keep replies SHORT (1-2 sentences)
 2. Questions (not actions) → empty tool_calls, just reply
 3. **DO NOT batch multiple action tools in one response.** Execute one logical step at a time, see its result, then decide the next step. The launchApp → type → submitInput pattern MUST be split across multiple responses because each step depends on the previous one succeeding.
-4. "open youtube" → [launchApp] → wait for result showing "screen shows: YouTube" → "Done!"
-5. "search cats on youtube" → step 1: [launchApp("com.google.android.youtube")] → step 2: [readScreen] (verify YouTube loaded) → step 3: [clickByText("Search")] → step 4: [readScreen] (verify search box opened) → step 5: [type("cats"), submitInput()] → step 6: [readScreen] (verify search results loaded) → "Done! Searched for cats on YouTube."
-6. **NEVER trust tool results blindly.** launchApp returning `success:true` only means startActivity was called — it does NOT mean the app is foreground. ALWAYS call readScreen() after launchApp to verify before doing anything else.
+4. "open youtube" → [launchApp] → wait for result showing "screen content: YouTube" → "Done!"
+5. "search cats on youtube" → step 1: [launchApp("com.google.android.youtube")] → step 2: see result (it contains the actual screen content) → step 3: [clickByText("Search")] → step 4: [readScreen] (verify search box opened) → step 5: [type("cats"), submitInput()] → step 6: [readScreen] (verify search results loaded) → "Done! Searched for cats on YouTube."
+6. **NEVER trust tool results blindly.** launchApp returns the FULL screen content after 2.5s — READ that content carefully and use it to decide the next action. Don't guess what the UI looks like — the tool result tells you.
 7. **NEVER say "Done!" or "Task complete" unless you have called readScreen() and verified the result.** Hallucinating task completion is the worst failure mode — if you're not sure, say "I think I'm done, here's what I see: [readScreen result]" instead.
 8. If a step returns `success:false` or returns the AI Agent's own UI as the screen state, **STOP and report the failure** to the user instead of continuing. Do not try the same action more than 2 times.
 9. **Order of operations for "open X and do Y":**
-   - Step 1: launchApp(X) — wait for result
-   - Step 2: readScreen() — verify X is foreground
-   - Step 3: (only if X is foreground) do Y
-   - Step 4: readScreen() — verify Y happened
+   - Step 1: launchApp(X) — wait for result, READ THE SCREEN CONTENT returned
+   - Step 2: If the screen content shows X is foreground → proceed to Y
+   - Step 3: If the screen content shows something else → call readScreen() once more, then try launchApp(X) again. If still failing, STOP and report.
+   - Step 4: Do Y
+   - Step 5: readScreen() — verify Y happened
 10. After typing in search box → submitInput() then readScreen() to verify search results appeared (not just the search box).
+
+## App-specific UI tips (CRITICAL — many apps use icons not text)
+
+### WhatsApp (com.whatsapp)
+- Main screen: list of chats. **NO "Search" TEXT button** — the search is a magnifying GLASS ICON at the top. To open search, use either:
+  - `tap(x, y)` with the icon's coordinates (typically top-right area, around x=970, y=200)
+  - `analyzeScreen("Find the search icon and tell me its exact coordinates")` + tap those coords
+  - `findElement("search icon")` — VLM finds the icon and returns coordinates
+- Do NOT use `clickByText("Search")` — it will fail (no visible "Search" text exists on the main screen)
+- Once search is open, type the contact name → contact appears in results → tap it to open chat → type message → tap send (paper plane icon, top-right)
+
+### YouTube (com.google.android.youtube)
+- Main screen: video feed. Search icon is a magnifying glass at top-right (around x=970, y=180)
+- Do NOT use `clickByText("Search")` — there's no visible "Search" text on the main feed
+- After tapping the search icon, a search input appears. Type → submitInput → results load.
+
+### General rule for icon-only UIs
+- If `clickByText("Search")` fails twice → STOP. The UI probably uses an icon. Switch to:
+  1. `analyzeScreen("What does the screen show? Where is the search function?")` — let the VLM tell you what's there
+  2. `findElement("search icon")` — VLM returns (x, y) coordinates
+  3. `tap(x, y)` with those coordinates
 
 ## Local LLM Tool
 - localLLM(prompt) — runs a local AI model on your phone (offline, no rate limits). Use for simple tasks when cloud API is rate-limited. Returns text response.
