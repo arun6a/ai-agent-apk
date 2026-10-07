@@ -62,17 +62,24 @@ class NotificationListener : NotificationListenerService() {
     }
 
     private fun triggerRule(rule: AgentDatabase.Rule, notifTitle: String, notifText: String) {
-        // Send a broadcast that the AgentService can pick up
-        val intent = Intent("com.ai.agent.RULE_TRIGGERED").apply {
-            putExtra("rule_name", rule.name)
-            putExtra("rule_action", rule.action)
-            putExtra("notification_title", notifTitle)
-            putExtra("notification_text", notifText)
+        // Start AgentService directly with the rule action.
+        // (Previously we sent a broadcast that nobody received — now we use a service intent.)
+        val serviceIntent = Intent(this, com.ai.agent.service.AgentService::class.java).apply {
+            action = com.ai.agent.service.AgentService.ACTION_PROCESS_RULE
+            putExtra(com.ai.agent.service.AgentService.EXTRA_RULE_NAME, rule.name)
+            putExtra(com.ai.agent.service.AgentService.EXTRA_RULE_ACTION, rule.action)
+            putExtra(com.ai.agent.service.AgentService.EXTRA_RULE_TRIGGER_TYPE, rule.triggerType)
+            putExtra(com.ai.agent.service.AgentService.EXTRA_NOTIFICATION_TITLE, notifTitle)
+            putExtra(com.ai.agent.service.AgentService.EXTRA_NOTIFICATION_TEXT, notifText)
         }
-        sendBroadcast(intent)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent)
+        } else {
+            startService(serviceIntent)
+        }
 
         // Also log it
-        db.logAction("Rule fired: ${rule.name} — ${rule.action}")
+        db.logAction("Notification rule fired: ${rule.name} (title=$notifTitle) — ${rule.action}")
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {

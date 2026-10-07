@@ -37,6 +37,13 @@ class AgentService : Service() {
         const val ACTION_STOP = "com.ai.agent.STOP"
         const val ACTION_PROCESS_COMMAND = "com.ai.agent.PROCESS_COMMAND"
         const val EXTRA_COMMAND = "command"
+        // Rules — fired by AlarmManager (time rules) or NotificationListener (notification rules)
+        const val ACTION_PROCESS_RULE = "com.ai.agent.PROCESS_RULE"
+        const val EXTRA_RULE_NAME = "rule_name"
+        const val EXTRA_RULE_ACTION = "rule_action"
+        const val EXTRA_RULE_TRIGGER_TYPE = "rule_trigger_type"  // "time" | "notification" | ...
+        const val EXTRA_NOTIFICATION_TITLE = "notification_title"
+        const val EXTRA_NOTIFICATION_TEXT = "notification_text"
 
         private var overlayManager: OverlayManager? = null
 
@@ -94,6 +101,16 @@ class AgentService : Service() {
                     processVoiceCommand(command)
                 }
             }
+            ACTION_PROCESS_RULE -> {
+                val ruleName = intent.getStringExtra(EXTRA_RULE_NAME) ?: "Unnamed rule"
+                val ruleAction = intent.getStringExtra(EXTRA_RULE_ACTION) ?: ""
+                val triggerType = intent.getStringExtra(EXTRA_RULE_TRIGGER_TYPE) ?: "time"
+                val notifTitle = intent.getStringExtra(EXTRA_NOTIFICATION_TITLE) ?: ""
+                val notifText = intent.getStringExtra(EXTRA_NOTIFICATION_TEXT) ?: ""
+                if (ruleAction.isNotEmpty()) {
+                    processRuleAction(ruleName, ruleAction, triggerType, notifTitle, notifText)
+                }
+            }
             else -> {
                 showOverlay()
             }
@@ -143,6 +160,96 @@ class AgentService : Service() {
             } catch (e: Exception) {
                 Log.e(TAG, "Error processing command", e)
                 speak("Sorry, I had an error: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Process a rule action. This is called when:
+     * - A time-based rule fires (via AlarmManager → RuleTriggerReceiver → ACTION_PROCESS_RULE intent)
+     * - A notification-based rule fires (via NotificationListener → ACTION_PROCESS_RULE intent)
+     *
+     * Uses the FULL system prompt (same as the chat agent loop) so rules get the smart agent,
+     * not the simplified voice command prompt.
+     */
+    private fun processRuleAction(
+        ruleName: String,
+        ruleAction: String,
+        triggerType: String,
+        notifTitle: String,
+        notifText: String
+    ) {
+        Log.i(TAG, "Processing rule action: ruleName=$ruleName, trigger=$triggerType")
+        speak("Rule triggered: $ruleName")
+
+        scope.launch {
+            try {
+                val basePrompt = try {
+                    assets.open("system_prompt.txt").bufferedReader().use { it.readText() }
+                } catch (e: Exception) {
+                    "You are an AI agent controlling an Android phone."
+                }
+
+                // Inject context that's relevant to a rule (vs a chat message)
+                val contextBlock = buildString {
+                    append("\n\n## Current Rule Trigger\n")
+                    append("- Rule name: $ruleName\n")
+                    append("- Trigger type: $triggerType\n")
+                    if (notifTitle.isNotEmpty() || notifText.isNotEmpty()) {
+                        append("- Triggering notification:\n")
+                        append("  Title: $notifTitle\n")
+                        append("  Text: $notifText\n")
+                    }
+                    append("\nThe user is not actively chatting — this rule fired automatically. ")
+                    append("Execute the action efficiently. If it requires the screen, call readScreen() first. ")
+                    append("If the action would reply to a notification, be brief (the user may be busy).")
+                }
+
+                val systemPrompt = basePrompt + contextBlock
+
+                val llm = llmClient ?: LLMClient(this@AgentService)
+                val tools = toolExecutor ?: ToolExecutor(this@AgentService)
+
+                // Run the agent loop (simplified — no UI updates, just log + TTS)
+                var conversation = "Rule action: $ruleAction"
+                var iteration = 0
+                val maxIterations = 25
+                val workLog = StringBuilder()
+
+                while (iteration < maxIterations) {
+                    iteration++
+                    val response = llm.chat(conversation, systemPrompt)
+
+                    if (response.toolCalls.isEmpty()) {
+                        // Task complete
+                        speak(response.reply.take(500))
+                        android.util.Log.i(TAG, "Rule '$ruleName' completed: ${response.reply}")
+                        break
+                    }
+
+                    val results = tools.executeTools(response.toolCalls)
+                    val resultsForLLM = StringBuilder("\n\n[Tool results from step $iteration]:\n")
+                    results.forEachIndexed { i, result ->
+                        val call = response.toolCalls[i]
+                        val argsStr = call.args.entries.joinToString(", ") { "${it.key}=${it.value}" }
+                        workLog.append("\n• ${call.name}($argsStr) → ${if (result.success) "✓" else "✗"}")
+                        resultsForLLM.append("Tool: ${call.name}($argsStr)\n")
+                        resultsForLLM.append("Result: ${result.output}\n\n")
+                    }
+                    conversation += resultsForLLM.toString()
+                    conversation += "\nBased on these results, decide the next step. If task is complete, reply with just a final message and no tool_calls."
+                }
+
+                if (iteration >= maxIterations) {
+                    speak("Rule $ruleName did not complete in $maxIterations steps")
+                    android.util.Log.w(TAG, "Rule '$ruleName' exceeded $maxIterations iterations")
+                }
+
+                val db = com.ai.agent.storage.AgentDatabase(this@AgentService)
+                db.logAction("Rule '$ruleName' executed: $workLog")
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to process rule action", e)
             }
         }
     }

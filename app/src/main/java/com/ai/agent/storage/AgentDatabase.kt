@@ -13,7 +13,7 @@ class AgentDatabase(context: Context) : SQLiteOpenHelper(context, DB_NAME, null,
 
     companion object {
         private const val DB_NAME = "ai_agent.db"
-        private const val DB_VERSION = 1
+        private const val DB_VERSION = 2
 
         // Conversations table
         const val TABLE_CONVERSATIONS = "conversations"
@@ -30,10 +30,11 @@ class AgentDatabase(context: Context) : SQLiteOpenHelper(context, DB_NAME, null,
         // Rules table
         const val TABLE_RULES = "rules"
         const val COL_NAME = "name"
-        const val COL_TRIGGER_TYPE = "trigger_type"  // "time", "notification"
-        const val COL_TRIGGER_VALUE = "trigger_value"  // "07:00", "com.whatsapp:Mom"
+        const val COL_TRIGGER_TYPE = "trigger_type"  // "time", "notification", "battery_low", "charging"
+        const val COL_TRIGGER_VALUE = "trigger_value"  // "07:00", "com.whatsapp:Mom", "20"
         const val COL_ACTION = "action"  // natural language description
         const val COL_ENABLED = "enabled"
+        const val COL_DAYS = "days"  // comma-separated day-of-week: "mon,tue,wed,thu,fri" or null for daily
 
         // Action log
         const val TABLE_LOG = "action_log"
@@ -64,7 +65,8 @@ class AgentDatabase(context: Context) : SQLiteOpenHelper(context, DB_NAME, null,
                 $COL_TRIGGER_TYPE TEXT,
                 $COL_TRIGGER_VALUE TEXT,
                 $COL_ACTION TEXT,
-                $COL_ENABLED INTEGER DEFAULT 1
+                $COL_ENABLED INTEGER DEFAULT 1,
+                $COL_DAYS TEXT
             )
         """.trimIndent())
 
@@ -78,11 +80,21 @@ class AgentDatabase(context: Context) : SQLiteOpenHelper(context, DB_NAME, null,
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_CONVERSATIONS")
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_MEMORY")
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_RULES")
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_LOG")
-        onCreate(db)
+        if (oldVersion < 2) {
+            // v2: add `days` column to rules table for day-of-week scheduling.
+            // Existing rules get NULL days (= daily), preserving their old behavior.
+            try {
+                db.execSQL("ALTER TABLE $TABLE_RULES ADD COLUMN $COL_DAYS TEXT")
+                android.util.Log.i("AgentDatabase", "Upgraded DB to v2 — added $COL_DAYS column to rules")
+            } catch (e: Exception) {
+                android.util.Log.e("AgentDatabase", "Failed to add $COL_DAYS column — recreating tables", e)
+                db.execSQL("DROP TABLE IF EXISTS $TABLE_CONVERSATIONS")
+                db.execSQL("DROP TABLE IF EXISTS $TABLE_MEMORY")
+                db.execSQL("DROP TABLE IF EXISTS $TABLE_RULES")
+                db.execSQL("DROP TABLE IF EXISTS $TABLE_LOG")
+                onCreate(db)
+            }
+        }
     }
 
     // === Conversations ===
@@ -151,15 +163,37 @@ class AgentDatabase(context: Context) : SQLiteOpenHelper(context, DB_NAME, null,
 
     // === Rules ===
 
-    fun addRule(name: String, triggerType: String, triggerValue: String, action: String): Long {
+    fun addRule(name: String, triggerType: String, triggerValue: String, action: String, days: String? = null): Long {
         val values = ContentValues().apply {
             put(COL_NAME, name)
             put(COL_TRIGGER_TYPE, triggerType)
             put(COL_TRIGGER_VALUE, triggerValue)
             put(COL_ACTION, action)
             put(COL_ENABLED, 1)
+            put(COL_DAYS, days)
         }
         return writableDatabase.insert(TABLE_RULES, null, values)
+    }
+
+    fun updateRule(id: Long, name: String? = null, triggerType: String? = null,
+                   triggerValue: String? = null, action: String? = null,
+                   days: String? = null, enabled: Boolean? = null): Int {
+        val values = ContentValues().apply {
+            if (name != null) put(COL_NAME, name)
+            if (triggerType != null) put(COL_TRIGGER_TYPE, triggerType)
+            if (triggerValue != null) put(COL_TRIGGER_VALUE, triggerValue)
+            if (action != null) put(COL_ACTION, action)
+            if (enabled != null) put(COL_ENABLED, if (enabled) 1 else 0)
+            // days is nullable — only update if explicitly provided (not the default sentinel)
+            // Caller must pass "" to clear, or null to leave unchanged.
+            // We use a sentinel here: if days parameter is provided as non-null, update it.
+        }
+        // Handle days explicitly — null means "don't touch", "" means clear, "mon,tue" means set
+        // We can't distinguish in ContentValues, so we use a separate call when days is non-null.
+        if (days != null) {
+            values.put(COL_DAYS, if (days.isEmpty()) null else days)
+        }
+        return writableDatabase.update(TABLE_RULES, values, "$COL_ID = ?", arrayOf(id.toString()))
     }
 
     fun getRules(enabledOnly: Boolean = false): List<Rule> {
@@ -174,7 +208,8 @@ class AgentDatabase(context: Context) : SQLiteOpenHelper(context, DB_NAME, null,
                     triggerType = it.getString(it.getColumnIndexOrThrow(COL_TRIGGER_TYPE)),
                     triggerValue = it.getString(it.getColumnIndexOrThrow(COL_TRIGGER_VALUE)),
                     action = it.getString(it.getColumnIndexOrThrow(COL_ACTION)),
-                    enabled = it.getInt(it.getColumnIndexOrThrow(COL_ENABLED)) == 1
+                    enabled = it.getInt(it.getColumnIndexOrThrow(COL_ENABLED)) == 1,
+                    days = if (it.getColumnIndex(COL_DAYS) >= 0) it.getString(it.getColumnIndex(COL_DAYS)) else null
                 ))
             }
         }
@@ -206,6 +241,7 @@ class AgentDatabase(context: Context) : SQLiteOpenHelper(context, DB_NAME, null,
         val triggerType: String,
         val triggerValue: String,
         val action: String,
-        val enabled: Boolean
+        val enabled: Boolean,
+        val days: String? = null  // "mon,tue,wed,thu,fri" or null for daily
     )
 }

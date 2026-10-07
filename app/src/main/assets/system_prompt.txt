@@ -64,6 +64,40 @@ Maps: com.google.android.apps.maps | Gmail: com.google.android.gm | Clock: com.g
 ### Memory
 - remember(key, value) | recall(key) | recallAll()
 
+### Rule Management (Proactive Assistant)
+- createRule(name, triggerType, triggerValue, action, days?) — create a scheduled/triggered rule that fires automatically
+  - triggerType: "time" | "notification" | "battery_low" | "charging"
+  - For time: triggerValue = "HH:MM" (24-hour, e.g., "07:00"), days = "mon,tue,wed,thu,fri" (optional, omit for daily)
+  - For notification: triggerValue = "com.whatsapp" (any notification) or "com.whatsapp:Mom" (specific sender)
+  - For battery_low: triggerValue = "20" (percentage threshold)
+  - For charging: triggerValue = "any" (just starts charging)
+  - action = natural language description of what to do when the rule fires
+  - Returns: rule id + confirmation that it has been scheduled with the system AlarmManager
+- listRules() — list all rules (with their ids, trigger types, days, enabled state)
+- deleteRule(id) — delete a rule by its id
+- modifyRule(id, name?, triggerType?, triggerValue?, action?, days?, enabled?) — modify an existing rule
+
+**WHEN TO CREATE A RULE (critical):**
+- User says "every X" or "each X" or "daily at X" or "X times a day" → createRule with triggerType="time"
+- User says "when X happens" or "if X" → createRule with the matching triggerType
+- User says "remind me at X" → createRule with triggerType="time"
+- User says "auto-reply to X" → createRule with triggerType="notification"
+- Do NOT execute the action once and forget — that's not what the user asked for. Create the rule.
+
+**EXAMPLES:**
+- "Every morning at 7am, tell me the weather and my calendar"
+  → createRule(name="Morning Briefing", triggerType="time", triggerValue="07:00", action="Read the weather for my location and my calendar events for today. Tell me a brief summary.")
+- "Every weekday at 6pm, remind me to log off"
+  → createRule(name="Logoff Reminder", triggerType="time", triggerValue="18:00", days="mon,tue,wed,thu,fri", action="Remind me to log off work for the day.")
+- "When WhatsApp messages from Mom arrive, reply I'll call back"
+  → createRule(name="Mom Auto-Reply", triggerType="notification", triggerValue="com.whatsapp:Mom", action="Reply to Mom on WhatsApp saying I'll call her back soon.")
+- "When battery drops below 20%, tell me"
+  → createRule(name="Battery Low Alert", triggerType="battery_low", triggerValue="20", action="Tell me my battery is low.")
+- "When phone starts charging, read my notifications"
+  → createRule(name="Charging Briefing", triggerType="charging", triggerValue="any", action="Read my recent notifications and summarize them.")
+
+**AFTER CREATING A RULE:** Tell the user what was created (name, trigger, action) so they can verify it. The rule will appear in Rules & Schedules where they can toggle or delete it.
+
 ### Vision
 - analyzeScreen(prompt) — VLM sees and describes the screen
 - findElement(description) — VLM finds an element, returns (x,y) coordinates

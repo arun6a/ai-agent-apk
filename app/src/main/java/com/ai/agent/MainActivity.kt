@@ -121,13 +121,22 @@ class MainActivity : AppCompatActivity() {
                 ))
                 voiceManager.speak("Rule triggered: ${rule.name}", currentLang)
             }
-            // Process the rule's action
+            // Process the rule action via the chat agent loop (smart path)
             lifecycleScope.launch {
                 processRuleAction(rule.action)
             }
         }
         ruleEngine?.start()
-        Log.i("MainActivity", "Rule engine started")
+        Log.i("MainActivity", "Rule engine started (legacy handler-based)")
+
+        // Also schedule all time-based rules with AlarmManager (battery-efficient, survives app kill)
+        try {
+            val scheduler = com.ai.agent.rules.RuleScheduler(this)
+            scheduler.scheduleAllTimeRules()
+            Log.i("MainActivity", "Scheduled all time rules with AlarmManager")
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Failed to schedule time rules", e)
+        }
     }
 
     private suspend fun processRuleAction(action: String) {

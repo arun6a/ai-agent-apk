@@ -879,6 +879,120 @@ class ToolExecutor(private val context: Context) {
             "localLLM" -> {
                 ToolResult(false, "Local LLM has been removed. The app now uses cloud AI (GLM-4.6) for everything, which is faster and more capable.")
             }
+            // ==================== RULE MANAGEMENT (Proactive Assistant) ====================
+            "createRule" -> {
+                val name = call.args["name"] as? String ?: return ToolResult(false, "missing name")
+                val triggerType = call.args["triggerType"] as? String
+                    ?: return ToolResult(false, "missing triggerType (use 'time', 'notification', 'battery_low', or 'charging')")
+                val triggerValue = call.args["triggerValue"] as? String
+                    ?: return ToolResult(false, "missing triggerValue (e.g., '07:00', 'com.whatsapp:Mom', '20')")
+                val action = call.args["action"] as? String ?: return ToolResult(false, "missing action")
+                val days = call.args["days"] as? String  // nullable — "mon,tue,wed,thu,fri" or null for daily
+
+                // Validate triggerType
+                val validTypes = listOf("time", "notification", "battery_low", "charging")
+                if (triggerType !in validTypes) {
+                    return ToolResult(false, "invalid triggerType. Use one of: $validTypes")
+                }
+
+                // Validate time format if time-based
+                if (triggerType == "time") {
+                    val parts = triggerValue.split(":")
+                    if (parts.size != 2 || parts[0].toIntOrNull() !in 0..23 || parts[1].toIntOrNull() !in 0..59) {
+                        return ToolResult(false, "invalid time format. Use HH:MM (24-hour), e.g., '07:00'")
+                    }
+                    // Validate days if provided
+                    if (days != null && days.isNotEmpty()) {
+                        val validDays = listOf("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+                        val parsed = days.split(",").map { it.trim().lowercase() }
+                        val invalid = parsed.filter { it !in validDays }
+                        if (invalid.isNotEmpty()) {
+                            return ToolResult(false, "invalid day(s): $invalid. Use 3-letter lowercase: mon, tue, wed, thu, fri, sat, sun")
+                        }
+                    }
+                }
+
+                val ruleId = database.addRule(name, triggerType, triggerValue, action, days)
+                // Schedule with AlarmManager if it's a time rule
+                if (triggerType == "time") {
+                    try {
+                        com.ai.agent.rules.RuleScheduler(context).scheduleTimeRule(
+                            database.getRules().find { it.id == ruleId }!!
+                        )
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to schedule rule", e)
+                    }
+                }
+                ToolResult(true, "Created rule '$name' (id=$ruleId, trigger=$triggerType:$triggerValue" +
+                    (if (days != null) ", days=$days" else "") + "). " +
+                    if (triggerType == "time") "It has been scheduled with the system AlarmManager and will fire even if the app is closed." else "")
+            }
+            "listRules" -> {
+                val rules = database.getRules(enabledOnly = false)
+                if (rules.isEmpty()) {
+                    ToolResult(true, "No rules configured yet. Create one with createRule().")
+                } else {
+                    val sb = StringBuilder("Rules (${rules.size}):\n")
+                    rules.forEach { r ->
+                        val status = if (r.enabled) "ON" else "OFF"
+                        val daysStr = if (r.days.isNullOrEmpty()) "daily" else r.days
+                        sb.append("- [${r.id}] [$status] ${r.name}\n")
+                        sb.append("    trigger: ${r.triggerType} = ${r.triggerValue}\n")
+                        sb.append("    days: $daysStr\n")
+                        sb.append("    action: ${r.action}\n\n")
+                    }
+                    ToolResult(true, sb.toString())
+                }
+            }
+            "deleteRule" -> {
+                val id = (call.args["id"] as? Number)?.toLong() ?: return ToolResult(false, "missing id")
+                // Cancel scheduled alarm if it's a time rule
+                try {
+                    com.ai.agent.rules.RuleScheduler(context).cancelRule(id)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to cancel alarm for rule $id", e)
+                }
+                database.deleteRule(id)
+                ToolResult(true, "Deleted rule id=$id")
+            }
+            "modifyRule" -> {
+                val id = (call.args["id"] as? Number)?.toLong() ?: return ToolResult(false, "missing id")
+                val existing = database.getRules().find { it.id == id }
+                    ?: return ToolResult(false, "rule id=$id not found")
+                val newName = call.args["name"] as? String
+                val newTriggerType = call.args["triggerType"] as? String
+                val newTriggerValue = call.args["triggerValue"] as? String
+                val newAction = call.args["action"] as? String
+                val newDays = call.args["days"] as? String  // pass "" to clear, "mon,tue" to set, null to leave unchanged
+                val newEnabled = (call.args["enabled"] as? Boolean)
+
+                database.updateRule(
+                    id = id,
+                    name = newName,
+                    triggerType = newTriggerType,
+                    triggerValue = newTriggerValue,
+                    action = newAction,
+                    days = newDays,
+                    enabled = newEnabled
+                )
+                // Reschedule if it's a time rule
+                val updated = database.getRules().find { it.id == id }
+                if (updated != null && updated.triggerType == "time" && updated.enabled) {
+                    try {
+                        com.ai.agent.rules.RuleScheduler(context).cancelRule(id)
+                        com.ai.agent.rules.RuleScheduler(context).scheduleTimeRule(updated)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to reschedule rule $id", e)
+                    }
+                } else if (updated != null && updated.triggerType == "time" && !updated.enabled) {
+                    try {
+                        com.ai.agent.rules.RuleScheduler(context).cancelRule(id)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to cancel alarm for rule $id", e)
+                    }
+                }
+                ToolResult(true, "Modified rule id=$id")
+            }
             else -> ToolResult(false, "unknown tool: ${call.name}")
         }
     }

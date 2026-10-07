@@ -6,7 +6,7 @@ Per-version changelogs for `arun6a/ai-agent-apk`. Each file documents one releas
 - Known issues (what's still broken)
 - Migration notes
 - Test cases
-- User feedback that drove the change
+- User feedback that drove the changes
 
 **Why this exists:** If the sandbox restarts (memory wipe), a future AI takes over, or you forget what version did what — these notes are the source of truth. The git log shows *what* changed, but these notes explain *why* and *what's next*.
 
@@ -32,6 +32,7 @@ Per-version changelogs for `arun6a/ai-agent-apk`. Each file documents one releas
 | v2.3.0 | 2026-10-07 | 59 | Fix agent brain — verify before claiming Done! | [v2.3.0.md](./v2.3.0.md) |
 | v2.3.1 | 2026-10-07 | 60 | Fix "Accessibility service not running" false negative | [v2.3.1.md](./v2.3.1.md) |
 | v2.4.0 | 2026-10-07 | 61 | Add Groq/Together providers, multi-provider VLM, smarter prompts | [v2.4.0.md](./v2.4.0.md) |
+| **v3.0.0** | 2026-10-07 | 62 | **Proactive Assistant — AI-driven rules + AlarmManager + fixed notification wiring** | [v3.0.0.md](./v3.0.0.md) |
 | (template) | — | — | — | [TEMPLATE.md](./TEMPLATE.md) |
 
 ## Quick History Summary
@@ -46,6 +47,9 @@ Per-version changelogs for `arun6a/ai-agent-apk`. Each file documents one releas
 
 **v2.4.x** — Multi-provider expansion
 - v2.4.0: added Groq + Together providers, free OpenRouter vision models, multi-provider VLM routing, WhatsApp/YouTube UI tips in system prompt
+
+**v3.x.x** — Proactive Assistant
+- v3.0.0: AI-driven rule creation (createRule/listRules/deleteRule/modifyRule tools), AlarmManager-based scheduling (survives app kill), fixed NotificationListener → AgentService wiring, full agent loop for rule actions, clean RulesActivity (no more manual form)
 
 ## File Naming Convention
 - `vMAJOR.MINOR.PATCH.md` — matches `versionName` from `app/build.gradle.kts`

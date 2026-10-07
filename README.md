@@ -2,7 +2,7 @@
 
 An autonomous AI agent that controls your Android phone via voice or text. Uses cloud AI (OpenRouter/Gemini/Z.ai) for reasoning and executes 80+ tools on your device.
 
-**Current version: v2.4.0** (versionCode 61)
+**Current version: v3.0.0** (versionCode 62)
 
 📖 **[Build History →](./BUILDS/README.md)** — per-version changelogs with what changed, why, known issues, and test cases. Start here if you're picking up the project fresh.
 
@@ -120,6 +120,7 @@ app/src/main/java/com/ai/agent/
 
 See [BUILDS/README.md](./BUILDS/README.md) for detailed per-version changelogs.
 
+- **v3.0.0** — Proactive Assistant: AI-driven rule creation, AlarmManager scheduling, fixed notification listener, full agent loop for rule actions
 - **v2.4.0** — Added Groq + Together providers, free OpenRouter vision models, multi-provider VLM routing, WhatsApp/YouTube UI tips in system prompt
 - **v2.3.1** — Fixed "Accessibility service not running" false negative (waitForAccessibilityService polling)
 - **v2.3.0** — Agent brain fixes: no batching, must verify before "Done!", CancellationException handling
