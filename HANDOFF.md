@@ -1,34 +1,39 @@
-# AI Agent Android Project — Handoff Document
+# AI Agent Android — Handoff Document
 
 ## ⚠️ For AI assistants taking over this project
 
-This document explains the full project history, current state, and what NOT to do. Read this before making changes.
+**READ THIS ENTIRE FILE BEFORE MAKING ANY CHANGES.**
+
+This document explains the full project history, current state, architecture, and what NOT to do. It was built across multiple Z.ai Code sandbox sessions with different AI assistants contributing.
 
 ---
 
 ## Project Overview
 
 **Repo**: https://github.com/arun6a/ai-agent-apk
-**Current Version**: v3.1.0 (versionCode 63)
+**Current Version**: v3.3.0 (versionCode 68)
 **Platform**: Android 7.0+ (API 24)
 **Language**: Kotlin
 **Build**: Gradle 8.10.2, JDK 17, Android SDK 34
+**APK Size**: ~6.6 MB (cloud-only, no local LLM binaries)
 
-An autonomous AI agent app that controls an Android phone via voice/text. Uses cloud AI (OpenRouter/Gemini/Z.ai) for reasoning and executes 80+ tools on the device.
+An autonomous AI agent app that controls an Android phone via voice/text. Uses cloud AI (OpenRouter/Groq/Gemini/Z.ai) for reasoning and executes 90+ tools on the device. Supports proactive rules (time/event-triggered automation).
 
 ---
 
-## 📚 Read the Build Notes First
+## Version History (Chronological)
 
-Per-version changelogs live in [`BUILDS/`](./BUILDS/README.md). Each version has:
-- What changed (features, fixes, refactors)
-- Files modified (with one-line descriptions)
-- Known issues (what's still broken)
-- Migration notes
-- Test cases
-- User feedback that drove the changes
-
-Start with the latest version file ([`BUILDS/v3.1.0.md`](./BUILDS/v3.1.0.md)) to understand current state, then work backwards if you need context on older changes.
+| Version | Key Changes | Built By |
+|---------|------------|----------|
+| v2.2.1 | Multi-provider support (OpenRouter/Gemini/Z.ai/Custom) | Sandbox 1 (original AI) |
+| v2.2.2 | Fix permission popup + configurable sandbox URLs | Sandbox 2 |
+| v2.3.0 | Fix agent brain — verify before claiming Done | Sandbox 2 |
+| v2.3.1 | Fix accessibility service false negative (async binding) | Sandbox 2 |
+| v2.4.0 | Add Groq/Together providers, multi-provider VLM | Sandbox 2 |
+| v3.0.0 | Proactive Assistant — AI-driven rules + AlarmManager | Sandbox 2 |
+| v3.1.0 | 9 new event triggers + BootReceiver + new tools | Sandbox 2 |
+| v3.2.2 | Batching enabled (was DO NOT batch → now BATCH independent) | Sandbox 1 |
+| **v3.3.0** | **API usage monitor + 128K context optimization** | **Sandbox 1** |
 
 ---
 
@@ -43,21 +48,30 @@ Start with the latest version file ([`BUILDS/v3.1.0.md`](./BUILDS/v3.1.0.md)) to
 ### ❌ This is NOT a local LLM project
 - Local LLM (llama.cpp) was tried and REMOVED in v1.9.0
 - Do NOT re-add `LocalLLM.kt`, `ModelDownloaderActivity.kt`, or `jniLibs/`
-- Local LLM caused: corrupted models, CLI flag incompatibility, 85MB APK bloat, "server exited" errors
 - The app is CLOUD-ONLY — this is final
 
 ### ❌ Do NOT commit secrets
 - `.env` files must NEVER be committed
-- API keys (OpenRouter, Gemini, GitHub tokens) go in the user's phone Settings, NOT in code
+- API keys go in the phone's Settings (SharedPreferences), NOT in code
 - A `.gitignore` is included — respect it
+
+### ❌ Do NOT use Pollinations AI as a fallback
+- Was tried and caused format conversion bugs (OpenAI tool_calls format)
+- Use OpenRouter (free Nemotron 120B) or Groq (free, 14,400/day) instead
+
+### ❌ Do NOT revert the batching change
+- v3.1.0 said "DO NOT batch multiple action tools"
+- v3.2.2+ changed this to "BATCH independent tools to save API requests"
+- This is CORRECT — Z.ai GLM-4.6 has 128K context, can handle multiple tools per call
+- Batching reduces API requests from 5-6 to 2-3 per complex task
 
 ---
 
-## Architecture (v2.2.1)
+## Architecture (v3.3.0)
 
 ```
 app/src/main/java/com/ai/agent/
-├── MainActivity.kt              # Chat UI + agent loop (max 25 iterations)
+├── MainActivity.kt              # Chat UI + agent loop (max 50 iterations)
 ├── Config.kt                    # App configuration constants
 ├── VoiceManager.kt             # STT (SpeechRecognizer) + TTS
 ├── VoiceInputActivity.kt       # Transparent activity for overlay voice input
@@ -66,126 +80,165 @@ app/src/main/java/com/ai/agent/
 │
 ├── accessibility/
 │   └── AgentAccessibilityService.kt  # Screen control (tap, type, swipe, readScreen)
+│       # Uses waitForAccessibilityService() — handles async binding (v3.3.1 fix)
 │
 ├── llm/
 │   ├── AIProvider.kt           # Multi-provider config (SharedPreferences)
-│   │                           # Providers: OpenRouter, Gemini, Z.ai, Custom
+│   │                           # 6 providers: OpenRouter, Groq, Together, Gemini, Z.ai, Custom
 │   │                           # Stores: provider ID, API key, endpoint, model
-│   └── LLMClient.kt            # Chat client (OpenAI-compatible + Gemini format)
-│                               # Constructor: LLMClient(context)
-│                               # Reads config from AIProvider each call
+│   ├── LLMClient.kt            # Multi-provider chat client
+│   │                           # Constructor: LLMClient(context)
+│   │                           # Supports: OpenAI-compatible + Gemini format
+│   │                           # Tracks: API usage via ApiUsageTracker
+│   └── ApiUsageTracker.kt     # NEW v3.3.0 — tracks calls + tokens
+│                               # Per-task, per-session, per-day stats
 │
 ├── tools/
-│   └── ToolExecutor.kt         # 80+ tools (see tool list below)
-│       # launchApp accepts BOTH "package" and "pkg" args (AI models vary)
+│   └── ToolExecutor.kt         # 90+ tools (see tool list below)
+│       # launchApp accepts BOTH "package" and "pkg" args
+│       # launchApp returns screen content (1500 chars) after 2.5s wait
+│       # executeTools() runs multiple tools sequentially (supports batching)
 │
 ├── service/
 │   ├── AgentService.kt         # Always-on foreground service
+│   │                           # processRuleAction() uses FULL agent loop
 │   └── OverlayManager.kt       # Floating button (tap=read, long-press=voice, drag=move)
 │
-├── rules/
-│   ├── RuleEngine.kt           # Time-triggered rules
-│   └── NotificationListener.kt # Notification-triggered rules
+├── rules/                      # Proactive rules system (v3.0.0+)
+│   ├── RuleEngine.kt           # Rule management
+│   ├── RuleScheduler.kt        # AlarmManager scheduling (survives reboot)
+│   ├── RuleTriggerReceiver.kt  # BroadcastReceiver for time triggers
+│   ├── BootReceiver.kt         # Reschedules rules on boot
+│   ├── BatteryRuleReceiver.kt  # Battery low/charging/discharging
+│   ├── IncomingCallReceiver.kt # Phone state + contact lookup
+│   ├── SMSReceiver.kt          # SMS_RECEIVED
+│   ├── HeadsetReceiver.kt     # HEADSET_PLUG
+│   ├── ScreenReceiver.kt      # SCREEN_ON/OFF + USER_PRESENT
+│   ├── WiFiReceiver.kt        # NETWORK_STATE_CHANGED
+│   ├── PackageReceiver.kt     # PACKAGE_ADDED/REMOVED
+│   └── NotificationListener.kt # Notification access
 │
 ├── storage/
 │   └── AgentDatabase.kt        # SQLite (conversations, memory, rules, logs)
 │
 ├── browser/
-│   └── BrowserController.kt   # In-app WebView (browserOpen, browserSearch, etc.)
+│   └── BrowserController.kt   # In-app WebView
 │
 └── ui/
-    ├── SettingsActivity.kt
+    ├── SettingsActivity.kt     # Settings + API Usage Monitor section
     ├── AIProviderSettingsActivity.kt  # Provider selection + API key + model picker
-    └── RulesActivity.kt
+    └── RulesActivity.kt        # Rules list view
 ```
 
 ---
 
 ## AI Provider System (KEY FEATURE)
 
-The app supports 4 AI providers, configurable in Settings WITHOUT rebuilding:
+The app supports 6 AI providers, configurable in Settings WITHOUT rebuilding:
 
-### 1. OpenRouter (RECOMMENDED — free, unlimited)
+### 1. OpenRouter (Free, Recommended)
 - Endpoint: `https://openrouter.ai/api/v1/chat/completions`
 - Default model: `nvidia/nemotron-3-super-120b-a12b:free` (120B params)
 - API key: https://openrouter.ai/keys
 - Format: OpenAI-compatible
 - Cost: $0.00 (free tier)
-- No daily quota limit
+- Limit: 50 requests/day free (1000/day with $10 credit)
 
-### 2. Google Gemini (free tier)
+### 2. Groq (Fastest, Best Free Tier)
+- Endpoint: `https://api.groq.com/openai/v1/chat/completions`
+- Models: llama-3.3-70b, llama-3.2-11b-vision, mixtral-8x7b
+- API key: https://console.groq.com/keys
+- Limit: 30 req/min, 14,400 req/day FREE
+- Format: OpenAI-compatible
+
+### 3. Together AI
+- Models: Llama 3.3 70B Turbo, Llama 3.1 405B, Qwen 2.5 72B
+- API key: https://api.together.ai
+- Limit: $5 free credit
+
+### 4. Google Gemini (Free Tier)
 - Endpoint: `https://generativelanguage.googleapis.com/v1beta`
 - Models: gemini-2.0-flash, 2.5-flash, 1.5-flash, 1.5-pro
 - API key: https://aistudio.google.com/apikey
-- Format: Gemini-specific (different request/response structure)
-- Free tier: 15 req/min, 1500/day
-- LLMClient.kt handles format conversion automatically
+- Format: Gemini-specific (LLMClient handles conversion)
+- Limit: 15 req/min, 1500 req/day
 
-### 3. Z.ai Proxy (sandbox-only, LIMITED)
-- Endpoint: `https://preview-chat-{session}.space-z.ai/api/llm/proxy`
-- Model: glm-4.6
+### 5. Z.ai Proxy (Sandbox, Limited)
+- Endpoint: sandbox `/api/llm/proxy`
+- Model: glm-4.6 (128K context!)
 - No API key needed (sandbox proxy handles auth)
-- LIMITATION: 300 requests/day, resets at UTC midnight
+- LIMITATION: 300 requests/day, 30 req/10min (BURST limit)
 - Only works when sandbox dev server is running
 
-### 4. Custom (any OpenAI-compatible)
+### 6. Custom (any OpenAI-compatible)
 - User enters endpoint, API key, model name
-- Works with: OpenAI, Groq, Together, Mistral, Ollama, etc.
+- Works with: OpenAI, Mistral, Ollama, etc.
 
-### How it works
+### How It Works
 - `AIProvider.kt` stores config in SharedPreferences
 - `LLMClient(context)` reads config on each `chat()` call
 - User can switch providers anytime in Settings
-- App calls provider DIRECTLY (no proxy needed for OpenRouter/Gemini)
+- App calls provider DIRECTLY (no proxy needed for OpenRouter/Groq/Gemini)
 
 ---
 
-## Tool List (80+)
+## API Usage Tracker (NEW v3.3.0)
+
+`ApiUsageTracker.kt` tracks:
+- **Per-task**: calls, tokens (prompt+completion), elapsed time
+- **Per-session**: total calls + tokens since app started
+- **Per-day**: total calls + tokens (resets at midnight)
+- **Provider used** per call
+
+### How to View Stats
+1. **In chat**: Each message shows `[API: N calls]` during execution
+2. **After task**: Shows `📊 Calls: N | Tokens: N (prompt+completion) | Ns`
+3. **In Settings**: Full report with task/session/daily breakdown
+
+### How It Works
+- `LLMClient.parseOpenAIResponse()` extracts `usage.prompt_tokens` + `completion_tokens`
+- `LLMClient.parseGeminiResponse()` extracts `usageMetadata`
+- Both call `ApiUsageTracker.recordCall(context, prompt, completion, provider)`
+
+---
+
+## Tool List (90+)
 
 ### Screen (Accessibility Service required)
 readScreen, tap, clickByText, type, swipe, scrollDown, scrollUp, pressBack, pressHome, pressEnter, submitInput, lockScreen, takeScreenshotToGallery
 
 ### Apps
-launchApp, listInstalledApps, getAppInfo, forceStopApp, uninstallApp
+launchApp, listInstalledApps, getAppInfo, forceStopApp, uninstallApp, openDialer, openContact, openSettings, shareText, shareFile
 
-### Contacts & Phone
-readContacts, searchContacts, callContact, sendSMS, getCallLog, sendEmail, shareText
+### Phone & Contacts
+readContacts, searchContacts, callContact, sendSMS, getCallLog, sendEmail
 
 ### Calendar & Alarms
 getCalendarEvents, createCalendarEvent, setAlarm, setTimer
 
-### Location
-getCurrentLocation, openMaps
-
-### Device Control
-getBatteryLevel, getVolume, setVolume, setBrightness, toggleFlashlight, getBluetoothState, getNetworkInfo, getDeviceInfo, pingHost, getCurrentTime
+### Device
+getBatteryLevel, getVolume, setVolume, setBrightness, toggleFlashlight, getBluetoothState, getNetworkInfo, getDeviceInfo, getCurrentTime, pingHost
 
 ### Media
 mediaPlayPause, mediaNext, mediaPrevious, takePhoto
 
-### Files
-listFiles, readFile, writeFile, copyFile, moveFile, deleteFile, createDirectory
+### Files & Terminal
+listFiles, readFile, writeFile, copyFile, moveFile, deleteFile, createDirectory, runShellCommand
 
-### Clipboard
-getClipboard, setClipboard
+### Web & Browser
+webSearch, makeHttpRequest, downloadFile, openUrl, browserOpen, browserSearch, browserReadPage, browserClick, browserFill, browserEval, browserScrollDown, browserBack, browserGetUrl
 
-### Web
-webSearch, makeHttpRequest, downloadFile, openUrl
+### Memory & Clipboard
+remember, recall, recallAll, getClipboard, setClipboard
 
-### In-App Browser
-browserOpen, browserSearch, browserReadPage, browserClick, browserFill, browserEval, browserScrollDown, browserBack, browserGetUrl
+### Vision
+analyzeScreen, findElement, translateText
 
-### Memory (SQLite)
-remember(key, value), recall(key), recallAll
+### Rules (Proactive)
+createRule, listRules, deleteRule, modifyRule
 
-### Vision (VLM)
-analyzeScreen(prompt), findElement(description), translateText
-
-### Terminal
-runShellCommand
-
-### Local LLM (REMOVED)
-localLLM — returns "removed, use cloud AI" message
+### Triggers (16 types)
+time, notification, battery_low, charging, discharging, incoming_call, sms_received, headset_connected, headset_disconnected, screen_on, screen_off, user_unlocked, wifi_connected, wifi_disconnected, app_installed, app_uninstalled
 
 ---
 
@@ -193,39 +246,31 @@ localLLM — returns "removed, use cloud AI" message
 
 ```
 1. User sends message
-2. LLM decides tool calls (up to 6 per step, max 25 iterations)
-3. ToolExecutor executes tools
-4. Results fed back to LLM
-5. LLM decides next step or completes task
-6. Loop ends when LLM replies with empty tool_calls
-7. Infinite loop guard: same tool+args 3x = stop
+2. ApiUsageTracker.startNewTask() — reset task counter
+3. LLM decides tool calls (BATCH independent tools, max 50 iterations)
+4. ToolExecutor.executeTools() runs them sequentially
+5. Results fed back to LLM
+6. LLM decides next step or completes task
+7. Loop ends when LLM replies with empty tool_calls
+8. Shows final reply + API stats
 ```
 
+### Batching (CRITICAL — v3.2.2+)
+- **BATCH independent tools**: if 3 tools don't depend on each other, call all 3 in ONE response
+- Example: "check battery, time, wifi" → [getBatteryLevel, getCurrentTime, getNetworkInfo] = 1 call
+- **SPLIT when dependent**: "open youtube then search" → launchApp → [type, submitInput] = 2 calls
+- This reduces API requests from 5-6 to 2-3 per complex task
+
 ### LLM Response Format
-The LLM must return JSON in `message.content`:
 ```json
 {
   "reply": "short message to user",
   "tool_calls": [
-    {"name": "launchApp", "args": {"package": "com.google.android.youtube"}}
+    {"name": "getBatteryLevel", "args": {}},
+    {"name": "getCurrentTime", "args": {}}
   ]
 }
 ```
-
-If task is complete: `"tool_calls": []`
-
----
-
-## System Prompt
-
-Located at: `app/src/main/assets/system_prompt.txt` (4 KB)
-
-Contains:
-- Agent role description
-- Full tool list with arg names
-- Common app package names (YouTube, WhatsApp, Chrome, etc.)
-- JSON response format rules
-- Verification rules (don't fire-and-forget)
 
 ---
 
@@ -243,42 +288,40 @@ cd ai-agent-apk
 export JAVA_HOME=/path/to/jdk17
 export ANDROID_HOME=/path/to/android-sdk
 ./gradlew assembleDebug
-# APK: app/build/outputs/apk/debug/app-debug.apk (~85MB with no jniLibs)
+# APK: app/build/outputs/apk/debug/app-debug.apk (~6.6 MB)
 ```
 
 ### Version Bump
 Edit `app/build.gradle.kts`:
 ```kotlin
-versionCode = 58  // increment
-versionName = "2.3.0"  // new version
+versionCode = 69  // increment
+versionName = "3.4.0"  // new version
 ```
 
 ---
 
-## What Was Tried and Abandoned
+## Key Technical Decisions
 
-### ❌ Local LLM (llama.cpp)
-- **Tried**: v1.7.0-v1.8.0
-- **Problems**: 
-  - llama.cpp CLI flags changed (`--no-conversation` removed in b11435+)
-  - Model files corrupted on download
-  - "server exited before becoming ready" errors
-  - 85MB APK bloat (llama binaries in jniLibs/)
-  - Android W^X protection (can't exec downloaded binaries)
-- **Resolution**: Removed entirely in v1.9.0. Cloud-only is final.
+### Why Cloud-Only (No Local LLM)
+- Local LLM (llama.cpp) was tried in v1.7.0-v1.8.0
+- Failed: CLI flag incompatibility, corrupted models, "server exited" errors, 85MB APK bloat
+- Cloud AI (OpenRouter/Groq/Gemini) is faster, smarter, and free
 
-### ❌ Pollinations AI fallback
-- **Tried**: When Z.ai hit daily quota
-- **Problems**:
-  - 402 error on system prompts > 800 chars
-  - Returns tool_calls in OpenAI format (empty content)
-  - Stringified tool_calls (not objects)
-  - Wrong tool selection (less capable model)
-- **Resolution**: Removed. Now uses OpenRouter (free, unlimited, better model)
+### Why Batching Was Enabled (v3.2.2)
+- v3.1.0 said "DO NOT batch" — caused 5-6 API calls per task
+- Z.ai GLM-4.6 has 128K context — can handle multiple tools per call
+- Batching reduces requests to 2-3 per task → 50% fewer API calls
+- Critical for staying under daily quotas (Z.ai: 300/day, OpenRouter: 50/day)
 
-### ❌ Z.ai as primary (300/day quota)
-- **Problem**: Daily quota of 300 requests exhausted quickly
-- **Resolution**: OpenRouter is now primary (unlimited free). Z.ai is a fallback option.
+### Why MAX_ITERATIONS = 50
+- Was 25 in v2.2.1 — too low for complex tasks
+- 50 gives headroom for multi-step automation
+- Combined with batching, uses fewer total API calls
+
+### Why Conversation Limit = 8000 chars
+- Was 2500 (too aggressive trimming)
+- GLM-4.6 has 128K context (~32K chars usable)
+- 8000 chars allows ~10-15 iterations before trimming
 
 ---
 
@@ -286,53 +329,40 @@ versionName = "2.3.0"  // new version
 
 - **User**: Arun (arun6a on GitHub)
 - **Device**: Android phone + tablet (no PC)
-- **Development environment**: Z.ai Code sandbox
+- **Development**: Z.ai Code sandbox (switches between sandboxes)
 - **Phone bridge**: tanel-2 (remote command queue via HTTP)
   - Repo: https://github.com/arun6a/tanel-2
   - Channels: "default" (Termux), "ide" (AndroidIDE)
-  - Used to push APKs, run commands on phone from sandbox
+  - Used to push APKs and run commands on phone from sandbox
 
-### How to push APK to phone
+### How to Push APK to Phone
 1. Build APK in sandbox
 2. Copy to `public/ai-agent-vX.Y.Z.apk`
 3. Update `/api/download/apk/route.ts` to serve new version
-4. Queue command via tanel: `curl -sL -o /storage/.../ai-agent.apk <download_url> && am start -a android.intent.action.VIEW -d file:///...ai-agent.apk -t application/vnd.android.package-archive`
-
----
-
-## Current State (as of v2.2.1)
-
-- ✅ Multi-provider support working (OpenRouter/Gemini/Z.ai/Custom)
-- ✅ 80+ tools implemented
-- ✅ Agent loop with tool execution
-- ✅ Voice control (STT/TTS)
-- ✅ Floating overlay button
-- ✅ Memory & rules (SQLite)
-- ✅ Vision (VLM) for screen analysis
-- ✅ In-app browser
-- ✅ Pushed to GitHub (clean repo, 61 files, 476 KB)
-
-### Known Issues
-- Vision (VLM) still uses Z.ai proxy — no free vision model on OpenRouter yet
-  - Phone falls back to readScreen() (text-based) when vision fails
-- APK is ~85MB (due to old build artifacts — can be reduced by cleaning build dir)
+4. Queue command via tanel:
+   ```
+   curl -sL -o /storage/.../ai-agent.apk <download_url> && \
+   am start -a android.intent.action.VIEW -d file:///...ai-agent.apk -t application/vnd.android.package-archive
+   ```
 
 ---
 
 ## DO NOT Do These Things
 
-1. ❌ Do NOT add web files (chat.html, agent.ts) — they were from an old phase
-2. ❌ Do NOT re-add local LLM — it was removed for good reasons
+1. ❌ Do NOT add web files (chat.html, agent.ts)
+2. ❌ Do NOT re-add local LLM (removed for good reasons)
 3. ❌ Do NOT commit `.env` or API keys
-4. ❌ Do NOT use Pollinations AI — use OpenRouter instead
-5. ❌ Do NOT hardcode API endpoints in LLMClient — use AIProvider config
-6. ❌ Do NOT change `LLMClient` constructor — it takes `Context`, not endpoint/model
-7. ❌ Do NOT add sandbox files (Next.js, package.json, etc.) to this repo
-8. ❌ Do NOT push build artifacts (app/build/) — they're in .gitignore
+4. ❌ Do NOT use Pollinations AI — use OpenRouter/Groq instead
+5. ❌ Do NOT hardcode API endpoints — use AIProvider config
+6. ❌ Do NOT change `LLMClient` constructor — it takes `Context`
+7. ❌ Do NOT add sandbox files (Next.js, package.json) to this repo
+8. ❌ Do NOT revert batching to "DO NOT batch"
+9. ❌ Do NOT reduce MAX_ITERATIONS below 50
+10. ❌ Do NOT reduce conversation limit below 8000
 
 ---
 
-## If You Need to Add a New Tool
+## How to Add a New Tool
 
 1. Add to `ToolExecutor.kt` in the `executeTool()` `when` block:
 ```kotlin
@@ -352,11 +382,24 @@ versionName = "2.3.0"  // new version
 
 ---
 
-## Contact / History
+## Current State (as of v3.3.0)
 
-This project was built across multiple Z.ai Code sandbox sessions with AI assistance.
-The user (Arun) is a hobbyist with no PC — only Android devices.
-The tanel-2 bridge allows the sandbox AI to control the phone remotely.
+- ✅ Multi-provider support (6 providers)
+- ✅ 90+ tools implemented
+- ✅ Agent loop with batching (2-3 calls per task, was 5-6)
+- ✅ API usage monitoring (calls + tokens, per task/session/day)
+- ✅ Voice control (STT/TTS)
+- ✅ Floating overlay button
+- ✅ Memory & rules (SQLite)
+- ✅ Proactive rules (16 trigger types, AlarmManager, survives reboot)
+- ✅ Vision (multi-provider VLM)
+- ✅ In-app browser
+- ✅ 128K context utilization (GLM-4.6)
 
-GitHub: https://github.com/arun6a/ai-agent-apk
-tanel-2: https://github.com/arun6a/tanel-2
+### Known Issues
+- Vision (VLM) may not work with all providers — falls back to readScreen() (text)
+- OpenRouter free tier: 50 req/day (add $10 for 1000/day)
+- Z.ai: 300 req/day + 30 req/10min burst limit
+
+### Recommended Provider for Agent Loop
+**Groq** (14,400 req/day free) — enough for ~2000 complex tasks per day
