@@ -192,8 +192,19 @@ class OverlayManager(private val context: Context) {
     private fun onOverlayTapped() {
         val service = AgentAccessibilityService.getInstance()
         if (service == null) {
-            Toast.makeText(context, "Accessibility not enabled", Toast.LENGTH_LONG).show()
-            speak("Accessibility service is not running. Please enable it in the app first.")
+            // Check if the service is at least ENABLED in system settings (just not bound yet).
+            // If enabled, give Android a moment and try again via coroutine rather than
+            // immediately erroring out — this happens at app launch before onServiceConnected.
+            val enabled = AgentAccessibilityService.isEnabled(context)
+            val msg = if (enabled) {
+                "Accessibility is enabled but service is still starting — try again in a moment."
+            } else {
+                "Accessibility not enabled"
+            }
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+            if (!enabled) {
+                speak("Accessibility service is not enabled. Please enable it in Settings → Accessibility → AI Agent.")
+            }
             return
         }
 

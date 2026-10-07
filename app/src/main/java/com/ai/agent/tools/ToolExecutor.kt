@@ -39,8 +39,8 @@ class ToolExecutor(private val context: Context) {
     }
 
     private suspend fun executeTool(call: LLMClient.ToolCall): ToolResult {
-        val service = AgentAccessibilityService.getInstance()
-            ?: return ToolResult(false, "Accessibility service not running.")
+        val service = waitForAccessibilityService()
+            ?: return ToolResult(false, "Accessibility service is not enabled. Open Settings → Accessibility → AI Agent → toggle ON.")
 
         return when (call.name) {
             "readScreen" -> {
@@ -908,8 +908,8 @@ class ToolExecutor(private val context: Context) {
      * Returns the VLM's text description of the screen.
      */
     private suspend fun analyzeScreenWithVLM(prompt: String): String {
-        val service = AgentAccessibilityService.getInstance()
-            ?: return "Accessibility service not running"
+        val service = waitForAccessibilityService()
+            ?: return "Accessibility service not enabled"
 
         // Take screenshot — use CompletableDeferred to bridge callback to coroutine
         val screenshotDeferred = kotlinx.coroutines.CompletableDeferred<String?>()
@@ -989,6 +989,33 @@ class ToolExecutor(private val context: Context) {
         }
 
         return null
+    }
+
+    /**
+     * Wait for the accessibility service to be bound by Android before running a tool.
+     *
+     * The system calls onServiceConnected() asynchronously — even after the user has enabled
+     * accessibility in Settings, the in-memory instance is briefly null at app launch.
+     * This caused the "Accessibility service not running" error even when the service WAS
+     * enabled. Now we check isEnabled(context) (the actual system setting) and if true, poll
+     * for the instance to bind for up to 5 seconds.
+     */
+    private suspend fun waitForAccessibilityService(): AgentAccessibilityService? {
+        // Fast path: instance already bound.
+        AgentAccessibilityService.getInstance()?.let { return it }
+        // Slow path: if enabled in system settings, wait for the bind to complete.
+        if (!AgentAccessibilityService.isEnabled(context)) return null
+        // Service is enabled but not yet bound. Poll up to 5s (10 × 500ms).
+        Log.i(TAG, "Accessibility is enabled but instance not yet bound — polling for up to 5s")
+        repeat(10) { i ->
+            delay(500)
+            AgentAccessibilityService.getInstance()?.let {
+                Log.i(TAG, "Accessibility service bound after ${i + 1} polls")
+                return it
+            }
+        }
+        Log.w(TAG, "Accessibility service enabled but never bound after 5s — Android may be slow")
+        return AgentAccessibilityService.getInstance()  // last try
     }
 
     data class ToolResult(
