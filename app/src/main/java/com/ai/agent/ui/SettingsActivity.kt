@@ -102,6 +102,23 @@ class SettingsActivity : AppCompatActivity() {
             setOnClickListener { testAPI() }
         })
 
+        // === Plugins ===
+        layout.addView(SectionTitle("Plugins & Tool Groups"))
+        val pluginReport = com.ai.agent.llm.PluginManager.getStatusReport(this)
+        layout.addView(InfoText(pluginReport))
+        layout.addView(Button(this).apply {
+            text = "🔄 Reload Plugins"
+            setOnClickListener {
+                com.ai.agent.llm.PluginManager.reload(this@SettingsActivity)
+                Toast.makeText(this@SettingsActivity, "Plugins reloaded", Toast.LENGTH_SHORT).show()
+                recreate()
+            }
+        })
+        layout.addView(Button(this).apply {
+            text = "⚙️ Toggle Plugins (coming soon)"
+            isEnabled = false
+        })
+
         // === API Usage ===
         layout.addView(SectionTitle("API Usage Monitor"))
         val usageReport = com.ai.agent.llm.ApiUsageTracker.getFullReport(this)
