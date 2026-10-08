@@ -47,6 +47,8 @@ Per-version changelogs for `arun6a/ai-agent-apk`. Each file documents one releas
 | v4.1.4 | 2026-10-08 | 78 | Async task patterns — waitAndContinue + follow-up rules + background listening | — |
 | v4.1.5 | 2026-10-08 | 79 | Add missing permissions — Bluetooth, WakeLock, Storage, ForegroundServiceType | — |
 | **v4.2.0** | 2026-10-08 | 80 | **Skills system + PluginManager — modular tools + Markdown skills** | [v4.2.0_pluginmanager.md](./v4.2.0_pluginmanager.md) |
+| v4.3.0 | 2026-10-08 | 82 | ML Kit on-device OCR — 3-tier hybrid screen reading (free, offline) | — |
+| **v5.0.0** | 2026-10-08 | 83 | **Screen Structure Tree + WorkManager + Notification Reply API + Vector Memory** | [v5.0.0.md](./v5.0.0.md) |
 | (template) | — | — | — | [TEMPLATE.md](./TEMPLATE.md) |
 
 ## Quick History Summary
@@ -86,9 +88,18 @@ Per-version changelogs for `arun6a/ai-agent-apk`. Each file documents one releas
 - v4.1.4: Async patterns (waitAndContinue, follow-up rules)
 - v4.1.5: Missing permissions (Bluetooth, WakeLock, Storage)
 
-**v4.2.x** — Skills + Plugins system (current)
+**v4.2.x** — Skills + Plugins system
 - v4.2.0: SkillManager (Sandbox-2) + PluginManager (Sandbox-1) — modular tools + Markdown skills
-- v3.4.0: 15 new activity tools (openActivity, openDeepLink, openWhatsAppChat, openYouTubeVideo, playSpotify, openInstagramProfile, openTelegramChat, makePhoneCall, etc.) — enables direct screen navigation via Android Intents instead of accessibility taps. Saves 86% API calls per complex task.
+
+**v4.3.x** — On-device OCR (Sandbox-2)
+- v4.3.0: ML Kit text-recognition — 3-tier hybrid screen reading (accessibility → ML Kit OCR → VLM). Free, offline, no API cost for OCR.
+
+**v5.0.x** — Reliability + Smart Memory (Sandbox-2)
+- v5.0.0: 4 major features requested by user:
+  - `readScreenStructured()` — JSON tree of clickable elements + bounds (saves ~50% of VLM calls)
+  - WorkManager — rules reliably fire after app kill / reboot (AlarmManager + WorkManager hybrid)
+  - `replyToNotification(package, message)` — direct notification reply via RemoteInput (no app opening)
+  - Vector Memory — `recallSimilar(query)` semantic search + `searchMemory(query)` full-text search (Jaccard similarity, on-device)
 
 ## File Naming Convention
 - `vMAJOR.MINOR.PATCH.md` — matches `versionName` from `app/build.gradle.kts`

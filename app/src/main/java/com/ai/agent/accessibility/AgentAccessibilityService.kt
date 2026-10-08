@@ -64,16 +64,72 @@ class AgentAccessibilityService : AccessibilityService() {
     private var currentForegroundPackage: String? = null
 
     fun getCurrentForegroundPackage(): String? {
-        // Try to get from root window first (most reliable)
         try {
             val root = rootInActiveWindow
             if (root != null && root.packageName != null) {
                 return root.packageName.toString()
             }
         } catch (e: Exception) {
-            // Fall through to tracked value
         }
         return currentForegroundPackage
+    }
+
+    /**
+     * Build a structured tree of the screen — like a DOM tree for Android.
+     * Returns JSON string with elements: type, text, clickable, bounds, scrollable.
+     * The AI can use this to know exactly what's clickable and where it is.
+     */
+    fun readScreenStructured(): String {
+        val root = rootInActiveWindow ?: return "{\"error\":\"screen is null\"}"
+        val sb = StringBuilder()
+        sb.append("{\"app\":\"${root.packageName ?: "unknown"}\",\"elements\":[")
+        val state = intArrayOf(0) // state[0] = element count
+        collectElements(root, sb, state, 15, 50)
+        sb.append("]}")
+        return sb.toString()
+    }
+
+    private fun collectElements(
+        node: AccessibilityNodeInfo?,
+        sb: StringBuilder,
+        state: IntArray,
+        maxDepth: Int,
+        maxElements: Int
+    ) {
+        if (node == null || maxDepth <= 0 || state[0] >= maxElements) return
+        val text = node.text?.toString()?.trim() ?: ""
+        val desc = node.contentDescription?.toString()?.trim() ?: ""
+        val clickable = node.isClickable
+        val scrollable = node.isScrollable
+        val className = node.className?.toString() ?: ""
+
+        if (text.isNotEmpty() || desc.isNotEmpty() || clickable || scrollable) {
+            if (state[0] > 0) sb.append(",")
+            state[0]++
+
+            val type = when {
+                className.contains("Button") || clickable -> "button"
+                className.contains("EditText") -> "input"
+                className.contains("TextView") || text.isNotEmpty() -> "text"
+                className.contains("ScrollView") || scrollable -> "scroll"
+                className.contains("ImageView") -> "image"
+                else -> "view"
+            }
+
+            val bounds = android.graphics.Rect()
+            node.getBoundsInScreen(bounds)
+            val label = if (text.isNotEmpty()) text else desc
+
+            sb.append("{\"type\":\"$type\",\"text\":\"${escapeJson(label)}\",\"clickable\":$clickable,\"scrollable\":$scrollable,\"bounds\":\"${bounds.left},${bounds.top},${bounds.right},${bounds.bottom}\"}")
+        }
+
+        for (i in 0 until node.childCount) {
+            collectElements(node.getChild(i), sb, state, maxDepth - 1, maxElements)
+        }
+    }
+
+    private fun escapeJson(s: String): String {
+        return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ").replace("\r", "").replace("\t", " ")
     }
 
     override fun onDestroy() {

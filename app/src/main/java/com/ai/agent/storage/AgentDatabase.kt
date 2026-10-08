@@ -161,6 +161,60 @@ class AgentDatabase(context: Context) : SQLiteOpenHelper(context, DB_NAME, null,
         return result
     }
 
+    /**
+     * Semantic recall — finds memories that are SIMILAR to the query, not just exact matches.
+     * Uses simple word overlap similarity (TF-IDF inspired).
+     * Returns list of (key, value, similarityScore) sorted by most similar first.
+     */
+    fun recallSimilar(query: String, limit: Int = 5): List<Triple<String, String, Float>> {
+        val allMemory = getAllMemory()
+        if (allMemory.isEmpty()) return emptyList()
+
+        // Tokenize query into words (lowercase, remove punctuation)
+        val queryWords = query.lowercase()
+            .replace(Regex("[^a-z0-9\\s]"), " ")
+            .split(Regex("\\s+"))
+            .filter { it.length > 2 }
+            .toSet()
+
+        if (queryWords.isEmpty()) return emptyList()
+
+        // Score each memory by word overlap
+        val scored = allMemory.map { (key, value) ->
+            val combinedText = "$key $value".lowercase()
+            val memoryWords = combinedText
+                .replace(Regex("[^a-z0-9\\s]"), " ")
+                .split(Regex("\\s+"))
+                .filter { it.length > 2 }
+                .toSet()
+
+            // Jaccard similarity: intersection / union
+            val intersection = queryWords.intersect(memoryWords).size
+            val union = queryWords.union(memoryWords).size
+            val score = if (union > 0) intersection.toFloat() / union else 0f
+
+            Triple(key, value, score)
+        }
+
+        // Filter: only return memories with some overlap (score > 0)
+        // Sort by score descending
+        return scored
+            .filter { it.third > 0 }
+            .sortedByDescending { it.third }
+            .take(limit)
+    }
+
+    /**
+     * Search memory by content (not just key) — finds memories where the value contains the query.
+     */
+    fun searchMemory(query: String): List<Pair<String, String>> {
+        val allMemory = getAllMemory()
+        val lowerQuery = query.lowercase()
+        return allMemory.filter { (key, value) ->
+            key.lowercase().contains(lowerQuery) || value.lowercase().contains(lowerQuery)
+        }.toList()
+    }
+
     // === Rules ===
 
     fun addRule(name: String, triggerType: String, triggerValue: String, action: String, days: String? = null): Long {

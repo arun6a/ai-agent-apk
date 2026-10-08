@@ -65,6 +65,8 @@ class ToolExecutor(private val context: Context) {
             "openSettings", "openAppSettings",
             "wait", "waitAndContinue", "localLLM",
             "executeSkill", "listSkills",
+            "recallSimilar", "searchMemory",
+            "replyToNotification",
             "openActivity", "openDeepLink", "openAppWithData", "searchInApp",
             "listAppActivities", "openWhatsAppChat", "openYouTubeVideo", "openMapsLocation",
             "playSpotify", "openInstagramProfile", "openTelegramChat",
@@ -1131,6 +1133,53 @@ class ToolExecutor(private val context: Context) {
             "localLLM" -> {
                 ToolResult(false, "Local LLM has been removed. The app now uses cloud AI (GLM-4.6) for everything, which is faster and more capable.")
             }
+            // ==================== SCREEN STRUCTURE TREE ====================
+            "readScreenStructured" -> {
+                val svc = service ?: AgentAccessibilityService.getInstance()
+                    ?: return ToolResult(false, "Accessibility service not running")
+                val result = svc.readScreenStructured()
+                ToolResult(true, "Screen structure:\n$result")
+            }
+            // ==================== NOTIFICATION REPLY ====================
+            "replyToNotification" -> {
+                val pkg = call.args["package"] as? String ?: return ToolResult(false, "missing package")
+                val replyText = call.args["message"] as? String ?: return ToolResult(false, "missing message")
+                try {
+                    // NotificationListener.replyToNotification is a companion method — need instance
+                    // For now, use the static approach via intent
+                    val replied = replyViaNotification(context, pkg, replyText)
+                    ToolResult(replied, if (replied) "Replied to $pkg: $replyText" else "Could not reply — no active notification with reply action from $pkg")
+                } catch (e: Exception) {
+                    ToolResult(false, "Reply error: ${e.message}")
+                }
+            }
+            // ==================== VECTOR MEMORY ====================
+            "recallSimilar" -> {
+                val query = call.args["query"] as? String ?: return ToolResult(false, "missing query")
+                val results = database.recallSimilar(query)
+                if (results.isEmpty()) {
+                    ToolResult(true, "No similar memories found for: $query")
+                } else {
+                    val sb = StringBuilder("Similar memories (top ${results.size}):\n")
+                    for ((key, value, score) in results) {
+                        sb.append("- $key: $value (similarity: ${"%.0f".format(score * 100)}%)\n")
+                    }
+                    ToolResult(true, sb.toString())
+                }
+            }
+            "searchMemory" -> {
+                val query = call.args["query"] as? String ?: return ToolResult(false, "missing query")
+                val results = database.searchMemory(query)
+                if (results.isEmpty()) {
+                    ToolResult(true, "No memories found containing: $query")
+                } else {
+                    val sb = StringBuilder("Found ${results.size} memories:\n")
+                    for ((key, value) in results) {
+                        sb.append("- $key: $value\n")
+                    }
+                    ToolResult(true, sb.toString())
+                }
+            }
             // ==================== SKILLS ====================
             "executeSkill" -> {
                 val skillName = call.args["name"] as? String ?: return ToolResult(false, "missing skill name")
@@ -1667,6 +1716,19 @@ class ToolExecutor(private val context: Context) {
         } catch (e: Exception) {
             "unknown"
         }
+    }
+
+    /**
+     * Reply to a notification via NotificationListener's replyToNotification method.
+     * Sends a message directly through the notification (no app opening needed).
+     */
+    private fun replyViaNotification(context: Context, packageName: String, replyText: String): Boolean {
+        val listener = com.ai.agent.rules.NotificationListener.instance
+        if (listener != null) {
+            return listener.replyToNotification(packageName, replyText)
+        }
+        android.util.Log.w(TAG, "replyViaNotification: NotificationListener not connected — use openWhatsAppChat instead")
+        return false
     }
 
     private fun getInstalledApps(): String {

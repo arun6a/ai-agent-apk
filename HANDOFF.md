@@ -11,11 +11,11 @@ This document explains the full project history, current state, architecture, an
 ## Project Overview
 
 **Repo**: https://github.com/arun6a/ai-agent-apk
-**Current Version**: v3.4.0 (versionCode 71)
+**Current Version**: v5.0.0 (versionCode 83)
 **Platform**: Android 7.0+ (API 24)
 **Language**: Kotlin
 **Build**: Gradle 8.10.2, JDK 17, Android SDK 34
-**APK Size**: ~6.6 MB (cloud-only, no local LLM binaries)
+**APK Size**: ~26 MB (cloud AI + ML Kit text-recognition on-device OCR since v4.3.0)
 
 An autonomous AI agent app that controls an Android phone via voice/text. Uses cloud AI (OpenRouter/Groq/Gemini/Z.ai) for reasoning and executes 90+ tools on the device. Supports proactive rules (time/event-triggered automation).
 
@@ -36,6 +36,10 @@ An autonomous AI agent app that controls an Android phone via voice/text. Uses c
 | v3.3.1 | Fix Gemini URL construction (HTML error) | Sandbox 1 |
 | v3.3.2 | Fix batching — read-only only, never batch actions | Sandbox 1 |
 | **v3.4.0** | **15 new activity tools (openActivity, openDeepLink, etc.)** | **Sandbox 1** |
+| v4.0.0-v4.1.5 | Hybrid Browser Agent (visible in-app browser + smart AI) | Sandbox 2 |
+| v4.2.0 | Skills system (Markdown skills) + PluginManager (modular JSON plugins) | Sandbox 1+2 |
+| v4.3.0 | ML Kit on-device OCR (3-tier hybrid screen reading) | Sandbox 2 |
+| **v5.0.0** | **readScreenStructured + WorkManager + Notification Reply + Vector Memory** | **Sandbox 2** |
 
 ---
 
@@ -231,7 +235,13 @@ listFiles, readFile, writeFile, copyFile, moveFile, deleteFile, createDirectory,
 webSearch, makeHttpRequest, downloadFile, openUrl, browserOpen, browserSearch, browserReadPage, browserClick, browserFill, browserEval, browserScrollDown, browserBack, browserGetUrl
 
 ### Memory & Clipboard
-remember, recall, recallAll, getClipboard, setClipboard
+remember, recall, recallAll, recallSimilar (semantic Jaccard), searchMemory (full-text), getClipboard, setClipboard
+
+### Screen Structure (v5.0.0 — saves VLM calls)
+readScreenStructured (JSON tree of clickable elements + bounds)
+
+### Notification Reply (v5.0.0 — instant, no app opening)
+replyToNotification(package, message) — uses Notification.Action + RemoteInput
 
 ### Vision
 analyzeScreen, findElement, translateText
@@ -384,24 +394,29 @@ versionName = "3.4.0"  // new version
 
 ---
 
-## Current State (as of v3.3.0)
+## Current State (as of v5.0.0)
 
 - ✅ Multi-provider support (6 providers)
-- ✅ 90+ tools implemented
+- ✅ 100+ tools implemented (including 4 new in v5.0.0)
 - ✅ Agent loop with batching (2-3 calls per task, was 5-6)
 - ✅ API usage monitoring (calls + tokens, per task/session/day)
 - ✅ Voice control (STT/TTS)
 - ✅ Floating overlay button
-- ✅ Memory & rules (SQLite)
-- ✅ Proactive rules (16 trigger types, AlarmManager, survives reboot)
-- ✅ Vision (multi-provider VLM)
-- ✅ In-app browser
+- ✅ Memory & rules (SQLite) + **semantic recall** (v5.0.0)
+- ✅ Proactive rules (16 trigger types) + **WorkManager reliability** (v5.0.0)
+- ✅ Vision (multi-provider VLM) + **readScreenStructured** (v5.0.0 — saves VLM calls)
+- ✅ In-app browser (visible, shared login)
 - ✅ 128K context utilization (GLM-4.6)
+- ✅ ML Kit on-device OCR (v4.3.0)
+- ✅ **Direct notification reply** without opening apps (v5.0.0)
+- ✅ Skills + Plugins (v4.2.0) — modular AI tool definitions
 
 ### Known Issues
-- Vision (VLM) may not work with all providers — falls back to readScreen() (text)
+- Vision (VLM) may not work with all providers — falls back to readScreen() (text) or readScreenStructured() (v5.0.0)
 - OpenRouter free tier: 50 req/day (add $10 for 1000/day)
 - Z.ai: 300 req/day + 30 req/10min burst limit
+- MIUI may kill NotificationListener — needs re-enable in Settings → Notifications → Notification access
+- recallSimilar uses Jaccard word-overlap (crude, no embeddings) — fine for typical memory stores, can be upgraded later
 
 ### Recommended Provider for Agent Loop
 **Groq** (14,400 req/day free) — enough for ~2000 complex tasks per day

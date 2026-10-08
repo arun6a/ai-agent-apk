@@ -138,6 +138,14 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             Log.e("MainActivity", "Failed to schedule time rules", e)
         }
+
+        // v5.0.0: Prune old completed WorkManager entries so its DB doesn't grow forever
+        try {
+            androidx.work.WorkManager.getInstance(this).pruneWork()
+            Log.i("MainActivity", "Pruned old WorkManager entries")
+        } catch (e: Exception) {
+            Log.w("MainActivity", "WorkManager prune failed (not critical)", e)
+        }
     }
 
     private suspend fun processRuleAction(action: String) {

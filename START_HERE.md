@@ -5,27 +5,25 @@
 ## Quick Summary
 
 This is an **Android AI Agent app** (Kotlin) that controls a phone via voice/text.
-- **Current version**: v3.4.0 (versionCode 71)
+- **Current version**: v5.0.0 (versionCode 83)
 - **Repo**: https://github.com/arun6a/ai-agent-apk
-- **APK**: Cloud-only (no local LLM), ~6.6 MB
+- **APK**: Cloud AI + ML Kit OCR on-device, ~26 MB
 
-## What's New in v3.4.0 (latest)
+## What's New in v5.0.0 (latest)
 
-### 1. API Usage Tracker (NEW)
-- `ApiUsageTracker.kt` tracks calls + tokens per task/session/day
-- Shows live stats in chat: `[API: 1 calls]`
-- Full report in Settings → API Usage Monitor
-- Works with OpenAI format AND Gemini format
+### 1. Screen Structure Tree — `readScreenStructured()`
+Returns JSON tree of clickable elements + their bounds. Saves ~50% of VLM calls — the LLM knows what's clickable without needing a screenshot.
 
-### 2. Batching Rules (v3.3.2)
-- System prompt now says "BATCH independent tools"
-- Reduces API calls from 5-6 to 2-3 per task
-- CRITICAL: Do NOT revert to "DO NOT batch"
+### 2. WorkManager — reliable rule execution
+Rules now wrap AlarmManager triggers in `RuleWorker` (via WorkManager). Survives app kill + retries on failure. AlarmManager still does precise HH:MM timing.
 
-### 3. 128K Context Utilization
-- MAX_ITERATIONS: 25 → 50
-- Conversation limit: 2500 → 8000 chars
-- GLM-4.6 has 128K context — use it!
+### 3. Notification Reply API — `replyToNotification(package, message)`
+Replies directly to a notification WITHOUT opening the app. Uses `Notification.Action` + `RemoteInput`. Works for WhatsApp / Telegram / SMS / etc.
+
+### 4. Vector Memory — `recallSimilar(query)` + `searchMemory(query)`
+Semantic memory search (Jaccard word-overlap similarity) + full-text search. No more exact-key-only recall — "do you remember my name?" now works after `remember("name", "Arun")`.
+
+See `BUILDS/v5.0.0.md` for full details. Earlier versions (v4.x — Browser Agent, Skills/Plugins, ML Kit OCR) documented in `BUILDS/README.md`.
 
 ## Build Instructions
 
@@ -47,7 +45,7 @@ export ANDROID_HOME=/path/to/android-sdk
 | File | Purpose |
 |------|---------|
 | `HANDOFF.md` | Full project guide (READ THIS) |
-| `BUILDS/v3.4.0.md` | Latest build details |
+| `BUILDS/v5.0.0.md` | Latest build details |
 | `app/src/main/assets/system_prompt.txt` | The AI's brain — all tools + rules |
 | `app/src/main/java/com/ai/agent/llm/AIProvider.kt` | 6 providers config |
 | `app/src/main/java/com/ai/agent/llm/LLMClient.kt` | Multi-provider chat client |
