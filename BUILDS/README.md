@@ -37,7 +37,16 @@ Per-version changelogs for `arun6a/ai-agent-apk`. Each file documents one releas
 | v3.3.0 | 2026-10-07 | 68 | API usage monitor + batching + 128K context optimization | [v3.3.0.md](./v3.3.0.md) |
 | v3.3.1 | 2026-10-07 | 69 | Fix Gemini — construct full URL with model + API key | [v3.3.1.md](./v3.3.1.md) |
 | v3.3.2 | 2026-10-07 | 70 | Fix batching — batch read-only only, NEVER batch action tools | [v3.3.2.md](./v3.3.2.md) |
-| **v3.4.0** | 2026-10-07 | 71 | **15 new activity tools — open specific screens inside other apps** | [v3.4.0.md](./v3.4.0.md) |
+| v3.4.0 | 2026-10-07 | 71 | 15 new activity tools — open specific screens inside other apps | [v3.4.0.md](./v3.4.0.md) |
+| v4.0.0 | 2026-10-08 | 72 | Hybrid Browser Agent — structured page reading + Chrome fallback | [v4.0.0.md](./v4.0.0.md) |
+| v4.0.1 | 2026-10-08 | 73 | Fix: browser/web/device tools work without accessibility | — |
+| v4.1.0 | 2026-10-08 | 74 | Visible in-app browser — shared login + user intervention | — |
+| v4.1.1 | 2026-10-08 | 75 | Smarter AI — planning + browser prompt fix + no-accessibility tool list | — |
+| v4.1.2 | 2026-10-08 | 76 | Browser mode UI + MIUI battery optimization + accessibility status fix | — |
+| v4.1.3 | 2026-10-08 | 77 | Fix tool_calls not executing — LLM response parser can't handle think tags | — |
+| v4.1.4 | 2026-10-08 | 78 | Async task patterns — waitAndContinue + follow-up rules + background listening | — |
+| v4.1.5 | 2026-10-08 | 79 | Add missing permissions — Bluetooth, WakeLock, Storage, ForegroundServiceType | — |
+| **v4.2.0** | 2026-10-08 | 80 | **Skills system + PluginManager — modular tools + Markdown skills** | [v4.2.0_pluginmanager.md](./v4.2.0_pluginmanager.md) |
 | (template) | — | — | — | [TEMPLATE.md](./TEMPLATE.md) |
 
 ## Quick History Summary
@@ -62,7 +71,23 @@ Per-version changelogs for `arun6a/ai-agent-apk`. Each file documents one releas
 - v3.3.1: fixed Gemini URL construction (was returning HTML instead of JSON)
 - v3.3.2: corrected batching rules — batch read-only only, NEVER batch action tools
 
-**v3.4.x** — Activity tools (current)
+**v3.4.x** — Activity tools
+- v3.4.0: 15 new activity tools (openActivity, openDeepLink, openWhatsAppChat, etc.)
+
+**v4.0.x** — Hybrid Browser Agent (Sandbox-2)
+- v4.0.0: 13 new browser tools (browserReadStructured, browserFillForm, openInChrome, etc.)
+- v4.0.1: Fix browser/web/device tools work without accessibility
+
+**v4.1.x** — Visible browser + smart AI (Sandbox-2)
+- v4.1.0: Visible in-app browser (shared login, user intervention, browser mode setting)
+- v4.1.1: Smarter AI planning (no-accessibility tool list, browser prompt fix)
+- v4.1.2: Browser mode UI + MIUI battery optimization
+- v4.1.3: Fix tool_calls parser (think tags + text-before-JSON)
+- v4.1.4: Async patterns (waitAndContinue, follow-up rules)
+- v4.1.5: Missing permissions (Bluetooth, WakeLock, Storage)
+
+**v4.2.x** — Skills + Plugins system (current)
+- v4.2.0: SkillManager (Sandbox-2) + PluginManager (Sandbox-1) — modular tools + Markdown skills
 - v3.4.0: 15 new activity tools (openActivity, openDeepLink, openWhatsAppChat, openYouTubeVideo, playSpotify, openInstagramProfile, openTelegramChat, makePhoneCall, etc.) — enables direct screen navigation via Android Intents instead of accessibility taps. Saves 86% API calls per complex task.
 
 ## File Naming Convention
