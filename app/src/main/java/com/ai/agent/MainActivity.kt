@@ -152,7 +152,10 @@ class MainActivity : AppCompatActivity() {
             val memory = database.getAllMemory()
             val memoryStr = if (memory.isEmpty()) "No memories stored yet."
             else memory.entries.joinToString("\n") { "- ${it.key}: ${it.value}" }
-            val systemPrompt = "$basePrompt\n\n## What I Remember About the User\n$memoryStr"
+            // Inject PluginManager (active plugin tools) + SkillManager (available skills)
+            val pluginPrompt = com.ai.agent.llm.PluginManager.getEnabledPluginsPrompt(this)
+            val skillPrompt = com.ai.agent.skills.SkillManager(this).also { it.loadSkills() }.generatePromptSection()
+            val systemPrompt = "$basePrompt$pluginPrompt$skillPrompt\n\n## What I Remember About the User\n$memoryStr"
 
             val response = llmClient.chat(action, systemPrompt)
             var finalReply = response.reply
@@ -589,7 +592,10 @@ class MainActivity : AppCompatActivity() {
             } else {
                 memory.entries.joinToString("\n") { "- ${it.key}: ${it.value}" }
             }
-            val systemPrompt = "$basePrompt\n\n## What I Remember About the User\n$memoryStr"
+            // Inject PluginManager (active plugin tools) + SkillManager (available skills)
+            val pluginPrompt = com.ai.agent.llm.PluginManager.getEnabledPluginsPrompt(this)
+            val skillPrompt = com.ai.agent.skills.SkillManager(this).also { it.loadSkills() }.generatePromptSection()
+            val systemPrompt = "$basePrompt$pluginPrompt$skillPrompt\n\n## What I Remember About the User\n$memoryStr"
 
             // Build conversation with recent history (last 6 messages)
             val conversation = StringBuilder()
