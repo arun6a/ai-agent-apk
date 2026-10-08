@@ -364,11 +364,22 @@ class MainActivity : AppCompatActivity() {
     private fun updateAccessibilityStatus() {
         // Use isEnabled(this) which checks the system setting (true source of state),
         // not isRunning() which is null at launch until onServiceConnected fires.
-        val enabled = AgentAccessibilityService.isEnabled(this)
-        binding.statusText.text = if (enabled) "Connected • Accessibility ON" else "Accessibility OFF"
-        binding.statusDot.setBackgroundResource(
-            if (enabled) R.drawable.status_dot else R.drawable.status_dot_off
-        )
+        val systemEnabled = AgentAccessibilityService.isEnabled(this)
+        val instanceAlive = AgentAccessibilityService.isRunning()
+        
+        if (systemEnabled && instanceAlive) {
+            binding.statusText.text = "Connected • Accessibility ON"
+            binding.statusDot.setBackgroundResource(R.drawable.status_dot)
+        } else if (systemEnabled && !instanceAlive) {
+            // System setting says enabled but service process died (MIUI killed it)
+            binding.statusText.text = "Reconnecting • Accessibility enabled (waiting for service)"
+            binding.statusDot.setBackgroundResource(R.drawable.status_dot)
+            // Try to re-trigger the service binding by re-enabling programmatically
+            Log.w("MainActivity", "Accessibility enabled in settings but service not running — MIUI may have killed it")
+        } else {
+            binding.statusText.text = "Accessibility OFF"
+            binding.statusDot.setBackgroundResource(R.drawable.status_dot_off)
+        }
     }
 
     private fun setupVoiceCallbacks() {

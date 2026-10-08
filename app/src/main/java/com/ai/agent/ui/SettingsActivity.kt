@@ -1,6 +1,9 @@
 package com.ai.agent.ui
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -115,6 +118,88 @@ class SettingsActivity : AppCompatActivity() {
                 com.ai.agent.llm.ApiUsageTracker.resetAll(this@SettingsActivity)
                 Toast.makeText(this@SettingsActivity, "Usage stats reset", Toast.LENGTH_SHORT).show()
                 recreate()
+            }
+        })
+
+        // === Browser Mode ===
+        layout.addView(SectionTitle("AI Browser Mode"))
+        val currentMode = com.ai.agent.llm.AIProvider.getBrowserMode(this)
+        val modeInfo = InfoText(
+            "Current: ${currentMode.uppercase()}\n\n" +
+            "In-App: Visible browser screen, no accessibility needed, user can see + help AI\n" +
+            "Chrome: Opens Chrome (needs accessibility), uses Chrome logins\n" +
+            "Auto: Tries in-app first, suggests Chrome for logged-in sites"
+        )
+        layout.addView(modeInfo)
+
+        val modeButtons = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
+        val btnInApp = Button(this).apply { text = "📱 In-App" }
+        val btnChrome = Button(this).apply { text = "🌐 Chrome" }
+        val btnAuto = Button(this).apply { text = "🤖 Auto" }
+        modeButtons.addView(btnInApp)
+        modeButtons.addView(btnChrome)
+        modeButtons.addView(btnAuto)
+        layout.addView(modeButtons)
+
+        btnInApp.setOnClickListener {
+            com.ai.agent.llm.AIProvider.setBrowserMode(this, "in_app")
+            Toast.makeText(this, "Browser mode: In-App (no accessibility needed)", Toast.LENGTH_SHORT).show()
+            recreate()
+        }
+        btnChrome.setOnClickListener {
+            com.ai.agent.llm.AIProvider.setBrowserMode(this, "chrome")
+            Toast.makeText(this, "Browser mode: Chrome (needs accessibility)", Toast.LENGTH_SHORT).show()
+            recreate()
+        }
+        btnAuto.setOnClickListener {
+            com.ai.agent.llm.AIProvider.setBrowserMode(this, "auto")
+            Toast.makeText(this, "Browser mode: Auto", Toast.LENGTH_SHORT).show()
+            recreate()
+        }
+
+        // === Battery Optimization (MIUI fix) ===
+        layout.addView(SectionTitle("Battery Optimization (MIUI/Xiaomi)"))
+        layout.addView(InfoText(
+            "If accessibility keeps turning OFF, MIUI is killing the service.\n\n" +
+            "Tap below to exempt AI Agent from battery optimization.\n" +
+            "This prevents MIUI from killing the accessibility service."
+        ))
+        layout.addView(Button(this).apply {
+            text = "⚡ Disable Battery Optimization"
+            setOnClickListener {
+                try {
+                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                    intent.data = Uri.parse("package:$packageName")
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    // Fallback: open battery optimization list
+                    try {
+                        startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                    } catch (e2: Exception) {
+                        Toast.makeText(this@SettingsActivity, "Cannot open battery settings: ${e2.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        })
+        layout.addView(Button(this).apply {
+            text = "🔧 Open MIUI Autostart Settings"
+            setOnClickListener {
+                try {
+                    // MIUI autostart settings
+                    val intent = Intent().apply {
+                        component = android.content.ComponentName(
+                            "com.miui.securitycenter",
+                            "com.miui.permcenter.autostart.AutoStartManagementActivity"
+                        )
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    startActivity(intent)
+                    Toast.makeText(this@SettingsActivity, "Enable autostart for AI Agent", Toast.LENGTH_LONG).show()
+                } catch (e: Exception) {
+                    Toast.makeText(this@SettingsActivity, "Not a MIUI device or settings unavailable", Toast.LENGTH_SHORT).show()
+                }
             }
         })
 
