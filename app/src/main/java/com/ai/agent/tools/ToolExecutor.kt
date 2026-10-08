@@ -39,12 +39,53 @@ class ToolExecutor(private val context: Context) {
     }
 
     private suspend fun executeTool(call: LLMClient.ToolCall): ToolResult {
-        val service = waitForAccessibilityService()
-            ?: return ToolResult(false, "Accessibility service is not enabled. Open Settings → Accessibility → AI Agent → toggle ON.")
+        // Tools that DON'T need accessibility — browser, web, device, memory, rules, etc.
+        // These work even without accessibility enabled.
+        val noAccessibilityNeeded = call.name in setOf(
+            "browserOpen", "browserReadStructured", "browserReadPage", "browserGetLinks",
+            "browserGetForms", "browserFillForm", "browserClickElement", "browserClickText",
+            "browserGetText", "browserWaitForElement", "browserScreenshot", "browserScrollDown",
+            "browserEval", "browserBack", "browserGetUrl", "browserSearch", "browserFill",
+            "browserClick",
+            "openInChrome", "searchInChrome",
+            "webSearch", "makeHttpRequest", "downloadFile", "openUrl",
+            "getBatteryLevel", "getCurrentTime", "getBluetoothState", "getNetworkInfo",
+            "getDeviceInfo", "pingHost", "getVolume", "setVolume", "setBrightness",
+            "toggleFlashlight", "toggleWifi",
+            "remember", "recall", "recallAll",
+            "getClipboard", "setClipboard",
+            "getCurrentLocation", "openMaps",
+            "createRule", "listRules", "deleteRule", "modifyRule",
+            "readContacts", "searchContacts",
+            "getCalendarEvents", "createCalendarEvent", "setAlarm", "setTimer",
+            "sendSMS", "callContact", "getCallLog", "sendEmail", "shareText", "shareFile",
+            "openDialer", "makePhoneCall", "composeEmail",
+            "listFiles", "readFile", "writeFile", "copyFile", "moveFile", "deleteFile", "createDirectory",
+            "listInstalledApps", "getAppInfo",
+            "openSettings", "openAppSettings",
+            "wait", "localLLM",
+            "openActivity", "openDeepLink", "openAppWithData", "searchInApp",
+            "listAppActivities", "openWhatsAppChat", "openYouTubeVideo", "openMapsLocation",
+            "playSpotify", "openInstagramProfile", "openTelegramChat",
+            "openGoogleSearch", "shareToApp", "openContact",
+            "mediaPlayPause", "mediaNext", "mediaPrevious", "takePhoto"
+        )
 
+        // For non-accessibility tools, skip the service check entirely.
+        // These tools don't reference `service` in the when block below.
+        val service: AgentAccessibilityService? = if (noAccessibilityNeeded) {
+            null  // not needed — these tools don't use it
+        } else {
+            waitForAccessibilityService()
+                ?: return ToolResult(false, "Accessibility service is not enabled. Open Settings → Accessibility → AI Agent → toggle ON. (This tool requires accessibility to control the screen.)")
+        }
+
+        // service is guaranteed non-null for accessibility tools (we returned early above if null)
+        // For non-accessibility tools, service is null but they don't use it
         return when (call.name) {
+            // === SCREEN TOOLS (require accessibility — service is non-null here) ===
             "readScreen" -> {
-                val text = service.readScreen()
+                val text = service!!.readScreen()
                 // AUTO-FALLBACK: if no text found, use VLM to see the screen
                 if (text.isEmpty() || text == "(no text on screen)" || text == "(screen is null)" || text.length < 10) {
                     Log.i(TAG, "readScreen found no text, falling back to VLM")
@@ -57,11 +98,11 @@ class ToolExecutor(private val context: Context) {
             "tap" -> {
                 val x = (call.args["x"] as? Number)?.toFloat() ?: return ToolResult(false, "missing x")
                 val y = (call.args["y"] as? Number)?.toFloat() ?: return ToolResult(false, "missing y")
-                ToolResult(service.tap(x, y), "tap($x, $y)")
+                ToolResult(service!!.tap(x, y), "tap($x, $y)")
             }
             "clickByText" -> {
                 val text = call.args["text"] as? String ?: return ToolResult(false, "missing text")
-                ToolResult(service.clickByText(text), "clickByText($text)")
+                ToolResult(service!!.clickByText(text), "clickByText($text)")
             }
             "type" -> {
                 val text = call.args["text"] as? String ?: return ToolResult(false, "missing text")
@@ -75,7 +116,7 @@ class ToolExecutor(private val context: Context) {
                     android.util.Log.w(TAG, "type() called while AI Agent is foreground — likely a launchApp didn't complete. Attempting recovery.")
                     return ToolResult(false, "type($text) ABORTED: AI Agent app is still foreground. The previous launchApp did not complete. Try calling launchApp again, then readScreen() to verify.")
                 }
-                val typed = service.type(text)
+                val typed = service!!.type(text)
                 delay(400)  // let the IME settle
                 ToolResult(typed, "type($text) on $currentPkg")
             }
@@ -84,13 +125,13 @@ class ToolExecutor(private val context: Context) {
                 val y1 = (call.args["y1"] as? Number)?.toFloat() ?: return ToolResult(false, "missing y1")
                 val x2 = (call.args["x2"] as? Number)?.toFloat() ?: return ToolResult(false, "missing x2")
                 val y2 = (call.args["y2"] as? Number)?.toFloat() ?: return ToolResult(false, "missing y2")
-                ToolResult(service.swipe(x1, y1, x2, y2), "swipe($x1,$y1 → $x2,$y2)")
+                ToolResult(service!!.swipe(x1, y1, x2, y2), "swipe($x1,$y1 → $x2,$y2)")
             }
-            "scrollDown" -> ToolResult(service.scrollDown(), "scrollDown")
-            "scrollUp" -> ToolResult(service.scrollUp(), "scrollUp")
-            "pressBack" -> ToolResult(service.pressBack(), "pressBack")
-            "pressHome" -> ToolResult(service.pressHome(), "pressHome")
-            "pressEnter" -> ToolResult(service.pressEnter(), "pressEnter")
+            "scrollDown" -> ToolResult(service!!.scrollDown(), "scrollDown")
+            "scrollUp" -> ToolResult(service!!.scrollUp(), "scrollUp")
+            "pressBack" -> ToolResult(service!!.pressBack(), "pressBack")
+            "pressHome" -> ToolResult(service!!.pressHome(), "pressHome")
+            "pressEnter" -> ToolResult(service!!.pressEnter(), "pressEnter")
             "submitInput" -> {
                 // Same AI-Agent-foreground guard as type() — don't submit our own chat input.
                 val am = context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
@@ -99,14 +140,14 @@ class ToolExecutor(private val context: Context) {
                     android.util.Log.w(TAG, "submitInput() called while AI Agent is foreground — aborting to prevent sending our own chat.")
                     return ToolResult(false, "submitInput ABORTED: AI Agent is foreground. launchApp didn't complete. Try again with launchApp + readScreen first.")
                 }
-                val submitted = service.submitInput()
+                val submitted = service!!.submitInput()
                 delay(800)  // wait for navigation/results to load
                 ToolResult(submitted, "submitInput on $currentPkg")
             }
             "launchApp" -> {
                 val pkg = (call.args["package"] as? String ?: call.args["pkg"] as? String)
                     ?: return ToolResult(false, "missing package")
-                val launched = service.launchApp(pkg)
+                val launched = service!!.launchApp(pkg)
                 if (!launched) return ToolResult(false, "launchApp($pkg) failed — startActivity returned false")
                 // Wait for the app to actually come to foreground before returning.
                 // Without this, the next tool (e.g., type) runs against the PREVIOUS foreground app
@@ -116,7 +157,7 @@ class ToolExecutor(private val context: Context) {
                 // Return FULL screen text (not truncated) so the LLM can see actual UI elements
                 // (button labels, icons' content descriptions, menu items) and decide what to click.
                 // Capped at 3000 chars to keep the LLM context manageable.
-                val screenText = try { service.readScreen() } catch (e: Exception) { "(readScreen failed: ${e.message})" }
+                val screenText = try { service!!.readScreen() } catch (e: Exception) { "(readScreen failed: ${e.message})" }
                 val finalScreen = if (screenText.length > 1500) screenText.take(1500) + "\n...[truncated]" else screenText
                 ToolResult(
                     true,
@@ -336,12 +377,12 @@ class ToolExecutor(private val context: Context) {
                 }
             }
             "lockScreen" -> {
-                service.lockScreen()
+                service!!.lockScreen()
                 ToolResult(true, "Screen locked")
             }
             "takeScreenshotToGallery" -> {
                 val screenshotDeferred = kotlinx.coroutines.CompletableDeferred<String?>()
-                service.captureScreen { base64 ->
+                service!!.captureScreen { base64 ->
                     screenshotDeferred.complete(base64)
                 }
                 val base64 = screenshotDeferred.await()
@@ -1519,7 +1560,7 @@ class ToolExecutor(private val context: Context) {
             // For now, use the accessibility service's tracked package
             val service = AgentAccessibilityService.getInstance()
             if (service != null) {
-                service.getCurrentForegroundPackage() ?: "unknown"
+                service!!.getCurrentForegroundPackage() ?: "unknown"
             } else {
                 "unknown"
             }
@@ -1564,7 +1605,7 @@ class ToolExecutor(private val context: Context) {
 
         // Take screenshot — use CompletableDeferred to bridge callback to coroutine
         val screenshotDeferred = kotlinx.coroutines.CompletableDeferred<String?>()
-        service.captureScreen { base64 ->
+        service!!.captureScreen { base64 ->
             screenshotDeferred.complete(base64)
         }
         val screenshotBase64 = screenshotDeferred.await()
