@@ -22,6 +22,7 @@ object AIProvider {
     private const val KEY_ENDPOINT = "endpoint"
     private const val KEY_MODEL = "model"
     private const val KEY_PROXY_BASE_URL = "proxy_base_url"  // Sandbox base URL for vision/web-search proxy
+    private const val KEY_BROWSER_MODE = "browser_mode"  // "in_app" | "chrome" | "auto"
 
     // === Provider presets ===
     data class ProviderInfo(
@@ -208,4 +209,19 @@ object AIProvider {
     /** Full URL for the web-search endpoint (POST /api/web-search). */
     fun getWebSearchUrl(context: Context): String =
         getProxyBaseUrl(context).trimEnd('/') + "/api/web-search"
+
+    // === Browser Mode ===
+    // Controls which browser the AI uses:
+    // "in_app" → visible in-app WebView (no accessibility needed, user can see + intervene)
+    // "chrome" → Chrome app via Intent (needs accessibility, uses Chrome login state)
+    // "auto" → try in-app first, suggest Chrome for logged-in sites
+    val DEFAULT_BROWSER_MODE = "auto"
+
+    fun getBrowserMode(context: Context): String {
+        return getPrefs(context).getString(KEY_BROWSER_MODE, DEFAULT_BROWSER_MODE) ?: DEFAULT_BROWSER_MODE
+    }
+
+    fun setBrowserMode(context: Context, mode: String) {
+        getPrefs(context).edit().putString(KEY_BROWSER_MODE, mode).apply()
+    }
 }

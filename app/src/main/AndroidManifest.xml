@@ -89,6 +89,14 @@
             android:label="AI Provider"
             android:parentActivityName=".ui.SettingsActivity" />
 
+        <!-- Visible in-app browser (v4.1.0) -->
+        <activity
+            android:name=".ui.BrowserActivity"
+            android:exported="false"
+            android:label="AI Browser"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+
         <service
             android:name=".accessibility.AgentAccessibilityService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"

@@ -13,30 +13,82 @@ import android.webkit.WebViewClient
 import android.net.Uri
 import kotlinx.coroutines.CompletableDeferred
 import java.io.ByteArrayOutputStream
+import com.ai.agent.ui.BrowserActivity
 
 /**
- * Hybrid browser controller — supports both WebView mode and Chrome fallback.
+ * Hybrid browser controller — supports visible in-app WebView + Chrome fallback.
  *
- * WebView mode (default):
+ * Visible WebView mode (default — v4.1.0+):
+ *   - Uses BrowserActivity's visible WebView (user can see what AI does)
  *   - Full DOM access via JavaScript
  *   - Structured page reading (buttons, links, forms, inputs)
  *   - Smart form filling
  *   - Screenshots for VLM
- *   - Page state persists across tool calls
+ *   - Cookie persistence (user logs in once → AI has the session)
+ *   - User can intervene when AI is stuck (mode toggle)
  *
- * Chrome fallback (for logged-in sites):
+ * Chrome fallback (for sites that need Chrome):
  *   - Uses openInChrome() to launch Chrome via Intent
  *   - Then uses accessibility tools (readScreen, clickByText, type) to control it
- *   - Separate from WebView state
+ *   - Requires accessibility service enabled
+ *
+ * Browser mode is controlled by AIProvider settings:
+ *   - "in_app" → always use visible WebView
+ *   - "chrome" → always use Chrome
+ *   - "auto" → try in-app, fall back to Chrome for logged-in sites
  */
 object BrowserController {
 
     private const val TAG = "BrowserController"
-    private var webView: WebView? = null
+    private var webView: WebView? = null  // background fallback (if BrowserActivity not open)
     private var handler = Handler(Looper.getMainLooper())
     private var pageLoadDeferred: CompletableDeferred<Boolean>? = null
 
-    private fun ensureWebView(context: Context): WebView {
+    /**
+     * Get the active WebView — prefers BrowserActivity's visible WebView,
+     * falls back to a background WebView if BrowserActivity isn't open.
+     */
+    private fun getWebView(context: Context): WebView {
+        // Prefer the visible WebView from BrowserActivity
+        BrowserActivity.activeWebView?.let { return it }
+        // Fall back to background WebView (for when BrowserActivity isn't visible)
+        return ensureBackgroundWebView(context)
+    }
+
+    /**
+     * Open a URL — launches BrowserActivity (visible browser) with the URL.
+     * If BrowserActivity is already open, loads the URL in the existing WebView.
+     */
+    fun openUrl(context: Context, url: String) {
+        Log.i(TAG, "Opening URL: $url")
+        val finalUrl = if (!url.startsWith("http")) "https://$url" else url
+
+        // If BrowserActivity is open, just load the URL
+        if (BrowserActivity.activeWebView != null) {
+            pageLoadDeferred = CompletableDeferred()
+            handler.post {
+                BrowserActivity.activeWebView?.loadUrl(finalUrl)
+            }
+        } else {
+            // Launch BrowserActivity with the URL
+            BrowserActivity.launch(context, finalUrl)
+        }
+
+        // Wait for page to load (15s timeout)
+        try {
+            kotlinx.coroutines.runBlocking {
+                kotlinx.coroutines.withTimeoutOrNull(15000) { pageLoadDeferred?.await() }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Page load timeout for $url — continuing anyway")
+        }
+    }
+
+    /**
+     * Create a background WebView (fallback when BrowserActivity isn't open).
+     * This is used only when the user hasn't opened the browser screen yet.
+     */
+    private fun ensureBackgroundWebView(context: Context): WebView {
         if (webView != null) return webView!!
         handler.post {
             webView = WebView(context.applicationContext).apply {
@@ -63,29 +115,13 @@ object BrowserController {
 
     // ==================== BASIC NAVIGATION ====================
 
-    fun openUrl(context: Context, url: String) {
-        Log.i(TAG, "Opening URL: $url")
-        val wv = ensureWebView(context)
-        pageLoadDeferred = CompletableDeferred()
-        handler.post {
-            wv.loadUrl(url)
-        }
-        try {
-            kotlinx.coroutines.runBlocking {
-                kotlinx.coroutines.withTimeoutOrNull(15000) { pageLoadDeferred?.await() }
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Page load timeout for $url — continuing anyway")
-        }
-    }
-
     fun goBack(context: Context) {
-        val wv = webView ?: return
+        val wv = getWebView(context)
         handler.post { if (wv.canGoBack()) wv.goBack() }
     }
 
     fun getCurrentUrl(context: Context): String? {
-        val wv = webView ?: return null
+        val wv = getWebView(context)
         return try {
             kotlinx.coroutines.runBlocking {
                 val deferred = CompletableDeferred<String?>()
@@ -98,7 +134,7 @@ object BrowserController {
     // ==================== RAW PAGE TEXT ====================
 
     fun getPageText(context: Context): String? {
-        val wv = webView ?: return null
+        val wv = getWebView(context)
         val deferred = CompletableDeferred<String?>()
         handler.post {
             wv.evaluateJavascript("document.body ? document.body.innerText : 'empty'") { result ->
@@ -125,7 +161,7 @@ object BrowserController {
      * the LLM sees page STRUCTURE, not just raw text.
      */
     fun readStructured(context: Context): String {
-        val wv = webView ?: return "{\"error\": \"No page loaded. Call browserOpen first.\"}"
+        val wv = getWebView(context); if (false) return "{\"error\": \"No page loaded. Call browserOpen first.\"}"
         val deferred = CompletableDeferred<String>()
         val script = """
             (function() {
@@ -215,7 +251,7 @@ object BrowserController {
      * Returns all links on the page as JSON: [{text, href}, ...]
      */
     fun getLinks(context: Context): String {
-        val wv = webView ?: return "[]"
+        val wv = getWebView(context); if (false) return "[]"
         val deferred = CompletableDeferred<String>()
         val script = """
             (function() {
@@ -252,7 +288,7 @@ object BrowserController {
      * Returns all form fields as JSON: [{type, name, placeholder, label, value, x, y}, ...]
      */
     fun getForms(context: Context): String {
-        val wv = webView ?: return "[]"
+        val wv = getWebView(context); if (false) return "[]"
         val deferred = CompletableDeferred<String>()
         val script = """
             (function() {
@@ -302,7 +338,7 @@ object BrowserController {
      * Returns true if a field was found and filled.
      */
     fun fillForm(context: Context, fieldSelector: String, value: String): Boolean {
-        val wv = webView ?: return false
+        val wv = getWebView(context); if (false) return false
         val deferred = CompletableDeferred<Boolean>()
         // Escape the value for safe JS embedding
         val escapedValue = value.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
@@ -359,7 +395,7 @@ object BrowserController {
      * Returns true if clicked.
      */
     fun clickElement(context: Context, selector: String): Boolean {
-        val wv = webView ?: return false
+        val wv = getWebView(context); if (false) return false
         val deferred = CompletableDeferred<Boolean>()
         val escapedSelector = selector.replace("\\", "\\\\").replace("'", "\\'")
         val script = """
@@ -389,7 +425,7 @@ object BrowserController {
      * Tries button, a, [role=button], and any element with matching text.
      */
     fun clickByText(context: Context, text: String): Boolean {
-        val wv = webView ?: return false
+        val wv = getWebView(context); if (false) return false
         val deferred = CompletableDeferred<Boolean>()
         val escapedText = text.replace("\\", "\\\\").replace("'", "\\'")
         val script = """
@@ -433,7 +469,7 @@ object BrowserController {
      * Get text from a specific CSS selector.
      */
     fun getText(context: Context, selector: String): String {
-        val wv = webView ?: return ""
+        val wv = getWebView(context); if (false) return ""
         val deferred = CompletableDeferred<String>()
         val escapedSelector = selector.replace("\\", "\\\\").replace("'", "\\'")
         val script = "(function() { var el = document.querySelector('$escapedSelector'); return el ? el.innerText : ''; })();"
@@ -460,7 +496,7 @@ object BrowserController {
      * Returns true if element found, false if timeout.
      */
     fun waitForElement(context: Context, selector: String, timeoutMs: Long): Boolean {
-        val wv = webView ?: return false
+        val wv = getWebView(context); if (false) return false
         val escapedSelector = selector.replace("\\", "\\\\").replace("'", "\\'")
         val deadline = System.currentTimeMillis() + timeoutMs
         while (System.currentTimeMillis() < deadline) {
@@ -485,7 +521,7 @@ object BrowserController {
      * Scroll down by N pixels.
      */
     fun scrollDown(context: Context, pixels: Int) {
-        val wv = webView ?: return
+        val wv = getWebView(context); if (false) return
         handler.post {
             wv.evaluateJavascript("window.scrollBy(0, $pixels);", null)
         }
@@ -497,7 +533,7 @@ object BrowserController {
      * Returns base64 string (no data: prefix), or null on failure.
      */
     fun screenshot(context: Context): String? {
-        val wv = webView ?: return null
+        val wv = getWebView(context)
         val deferred = CompletableDeferred<String?>()
         handler.post {
             try {
@@ -536,7 +572,7 @@ object BrowserController {
      * Execute arbitrary JavaScript on the page.
      */
     fun evalJs(context: Context, script: String): String? {
-        val wv = webView ?: return null
+        val wv = getWebView(context)
         val deferred = CompletableDeferred<String?>()
         handler.post {
             wv.evaluateJavascript(script) { result ->

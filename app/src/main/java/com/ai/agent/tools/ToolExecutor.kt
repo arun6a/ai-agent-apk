@@ -949,9 +949,25 @@ class ToolExecutor(private val context: Context) {
             "browserOpen" -> {
                 val url = call.args["url"] as? String ?: return ToolResult(false, "missing url")
                 val finalUrl = if (!url.startsWith("http")) "https://$url" else url
-                BrowserController.openUrl(context, finalUrl)
-                Thread.sleep(2000)
-                ToolResult(true, "Browser opened: $finalUrl")
+                val browserMode = AIProvider.getBrowserMode(context)
+                when (browserMode) {
+                    "chrome" -> {
+                        // User chose Chrome mode — open in Chrome (needs accessibility for AI to read results)
+                        val opened = BrowserController.openInChrome(context, finalUrl)
+                        ToolResult(opened, if (opened) "Opened in Chrome: $finalUrl — use readScreen() to see page" else "Chrome not available")
+                    }
+                    "auto", "in_app" -> {
+                        // Use the visible in-app browser (BrowserActivity)
+                        BrowserController.openUrl(context, finalUrl)
+                        Thread.sleep(2000)
+                        ToolResult(true, "Browser opened (visible): $finalUrl — user can see what you're doing")
+                    }
+                    else -> {
+                        BrowserController.openUrl(context, finalUrl)
+                        Thread.sleep(2000)
+                        ToolResult(true, "Browser opened: $finalUrl")
+                    }
+                }
             }
             "browserReadPage" -> {
                 val result = BrowserController.getPageText(context)
