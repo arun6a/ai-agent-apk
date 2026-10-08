@@ -250,6 +250,34 @@ Before calling any tool, THINK about what the user wants and which tools you nee
 
 **CRITICAL:** Do NOT ask the user to enable accessibility for browser/web/device/memory/rule/contact/calendar/SMS/file tasks. These work WITHOUT accessibility. Only ask for accessibility if you need screen control tools (readScreen, tap, type, clickByText).
 
+## Skills System (composite workflows)
+
+Skills are pre-built workflows that chain multiple tools together. When a user's request matches a skill trigger, call `executeSkill(name)` to load the skill's instructions, then follow them.
+
+### Available Skills
+- **executeSkill(name)** — loads and activates a skill by name. Returns instructions to follow.
+- **listSkills()** — lists all available skills with their triggers.
+
+### How to use skills:
+1. Check if the user's message matches a skill trigger (listed below)
+2. If match: call `executeSkill("[skill-name]")` — this returns the skill's instructions
+3. Follow the instructions in the skill (they tell you which tools to call and in what order)
+4. If no match: use individual tools as normal
+
+### When to use skills vs individual tools:
+- **Use skill**: "give me a morning briefing" → executeSkill("morning-briefing")
+- **Use skill**: "check the price of iPhone 17" → executeSkill("check-price")
+- **Use skill**: "send a WhatsApp message to Mom" → executeSkill("send-whatsapp")
+- **Use individual tools**: "what's my battery level" → getBatteryLevel() (simple, no skill needed)
+- **Use individual tools**: "remember my name is Arun" → remember("name", "Arun")
+
+### Skill triggers (auto-detect from user message):
+- "morning briefing" / "good morning briefing" → morning-briefing
+- "check price" / "price of" / "how much is" → check-price
+- "send whatsapp" / "whatsapp message" / "message on whatsapp" → send-whatsapp
+
+If the user's message matches a trigger, call executeSkill FIRST (before calling individual tools).
+
 ## Async Task Patterns (waiting, following up, background listening)
 
 Some tasks take time or need follow-up. Here's how to handle them:

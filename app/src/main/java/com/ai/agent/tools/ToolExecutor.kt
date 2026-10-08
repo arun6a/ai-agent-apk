@@ -64,6 +64,7 @@ class ToolExecutor(private val context: Context) {
             "listInstalledApps", "getAppInfo",
             "openSettings", "openAppSettings",
             "wait", "waitAndContinue", "localLLM",
+            "executeSkill", "listSkills",
             "openActivity", "openDeepLink", "openAppWithData", "searchInApp",
             "listAppActivities", "openWhatsAppChat", "openYouTubeVideo", "openMapsLocation",
             "playSpotify", "openInstagramProfile", "openTelegramChat",
@@ -1087,6 +1088,41 @@ class ToolExecutor(private val context: Context) {
             }
             "localLLM" -> {
                 ToolResult(false, "Local LLM has been removed. The app now uses cloud AI (GLM-4.6) for everything, which is faster and more capable.")
+            }
+            // ==================== SKILLS ====================
+            "executeSkill" -> {
+                val skillName = call.args["name"] as? String ?: return ToolResult(false, "missing skill name")
+                try {
+                    val skillManager = com.ai.agent.skills.SkillManager(context)
+                    skillManager.loadSkills()
+                    val body = skillManager.getSkillBody(skillName)
+                    if (body != null) {
+                        ToolResult(true, "SKILL INSTRUCTIONS LOADED — follow these instructions:\n\n$body\n\nEND OF SKILL INSTRUCTIONS. Now execute the steps above using the available tools.")
+                    } else {
+                        ToolResult(false, "Skill not found: $skillName. Available skills: ${skillManager.getSkills().map { it.name }}")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "executeSkill error", e)
+                    ToolResult(false, "Skill error: ${e.message}")
+                }
+            }
+            "listSkills" -> {
+                try {
+                    val skillManager = com.ai.agent.skills.SkillManager(context)
+                    skillManager.loadSkills()
+                    val skills = skillManager.getSkills()
+                    if (skills.isEmpty()) {
+                        ToolResult(true, "No skills installed.")
+                    } else {
+                        val sb = StringBuilder("Available skills (${skills.size}):\n")
+                        for (s in skills) {
+                            sb.append("- ${s.name}: ${s.description}\n  Trigger: ${s.trigger}\n")
+                        }
+                        ToolResult(true, sb.toString())
+                    }
+                } catch (e: Exception) {
+                    ToolResult(false, "Error listing skills: ${e.message}")
+                }
             }
             // ==================== RULE MANAGEMENT (Proactive Assistant) ====================
             "createRule" -> {
