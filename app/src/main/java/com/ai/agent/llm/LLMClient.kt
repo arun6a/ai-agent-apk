@@ -260,13 +260,22 @@ class LLMClient(private val context: Context) {
      */
     private fun parseResponse(content: String): LLMResponse {
         var cleaned = content.trim()
-        if (cleaned.startsWith("```")) {
+
+        // Step 1: Remove <think>...</think> tags (some models output these)
+        cleaned = cleaned.replace(Regex("<think>[\\s\\S]*?</think>", RegexOption.IGNORE_CASE), "")
+        
+        // Step 2: Remove markdown code fences
+        if (cleaned.contains("```")) {
             cleaned = cleaned.replace(Regex("^```(?:json)?\\s*"), "")
                 .replace(Regex("\\s*```$"), "")
         }
 
+        // Step 3: Try to extract JSON from the content
+        // The LLM might output text before/after the JSON, so we find the first { and last }
+        val jsonStr = extractJson(cleaned)
+
         return try {
-            val json = JSONObject(cleaned)
+            val json = JSONObject(jsonStr)
             val reply = json.optString("reply", "Done.")
             val toolCalls = mutableListOf<ToolCall>()
             val callsArray = json.optJSONArray("tool_calls")
@@ -288,7 +297,67 @@ class LLMClient(private val context: Context) {
             }
             LLMResponse(reply, toolCalls)
         } catch (e: Exception) {
+            // JSON parsing failed — return the content as-is with no tool calls
+            Log.w("LLMClient", "Failed to parse JSON from response: ${content.take(200)}")
             LLMResponse(content, emptyList())
         }
+    }
+
+    /**
+     * Extract the first valid JSON object from a string that may contain
+     * other text before or after the JSON.
+     * 
+     * Example: "I'll search for that.\n{"reply": "...", "tool_calls": [...]}"
+     * Returns: '{"reply": "...", "tool_calls": [...]}'
+     */
+    private fun extractJson(text: String): String {
+        val trimmed = text.trim()
+        
+        // Fast path: if the entire string is already valid JSON, return it
+        try {
+            JSONObject(trimmed)
+            return trimmed
+        } catch (e: Exception) {
+            // Not pure JSON — need to extract
+        }
+
+        // Find the first { and try to find the matching }
+        val firstBrace = trimmed.indexOf('{')
+        if (firstBrace < 0) return trimmed  // no JSON at all
+
+        // Try progressively longer substrings until we find valid JSON
+        var depth = 0
+        var inString = false
+        var escape = false
+        for (i in firstBrace until trimmed.length) {
+            val c = trimmed[i]
+            if (escape) {
+                escape = false
+                continue
+            }
+            when (c) {
+                '\\' -> escape = true
+                '"' -> inString = !inString
+                '{' -> if (!inString) depth++
+                '}' -> {
+                    if (!inString) {
+                        depth--
+                        if (depth == 0) {
+                            // Found the complete JSON object
+                            val candidate = trimmed.substring(firstBrace, i + 1)
+                            try {
+                                JSONObject(candidate)  // verify it's valid
+                                return candidate
+                            } catch (e: Exception) {
+                                // Not valid JSON — keep looking
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fallback: return everything from first { to end
+        return trimmed.substring(firstBrace)
     }
 }
