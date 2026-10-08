@@ -11,8 +11,8 @@ android {
         applicationId = "com.ai.agent"
         minSdk = 24
         targetSdk = 34
-        versionCode = 81
-        versionName = "4.2.1"
+        versionCode = 82
+        versionName = "4.3.0"
     }
 
     buildTypes {
@@ -44,4 +44,6 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // ML Kit — on-device text recognition (OCR) for screen reading
+    implementation("com.google.mlkit:text-recognition:16.0.0")
 }

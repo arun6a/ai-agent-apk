@@ -87,13 +87,55 @@ class ToolExecutor(private val context: Context) {
             // === SCREEN TOOLS (require accessibility — service is non-null here) ===
             "readScreen" -> {
                 val text = service!!.readScreen()
-                // AUTO-FALLBACK: if no text found, use VLM to see the screen
-                if (text.isEmpty() || text == "(no text on screen)" || text == "(screen is null)" || text.length < 10) {
-                    Log.i(TAG, "readScreen found no text, falling back to VLM")
-                    val vlmResult = analyzeScreenWithVLM("Describe what's on the screen. Include app name, visible elements, and any images or icons.")
-                    ToolResult(true, "Screen text was empty. VLM analysis: $vlmResult")
-                } else {
+                // 3-TIER HYBRID SCREEN READING:
+                // 1. Accessibility text (free, instant) — already have it
+                // 2. ML Kit OCR (free, offline, 0.1s) — try if accessibility failed
+                // 3. VLM API (1 API call, 2-5s) — last resort fallback
+                if (text.isNotEmpty() && text != "(no text on screen)" && text != "(screen is null)" && text.length >= 10) {
+                    // Tier 1: Accessibility found text — use it
                     ToolResult(true, text)
+                } else {
+                    // Accessibility found nothing — try ML Kit (free, offline)
+                    Log.i(TAG, "readScreen: accessibility found no text — trying ML Kit OCR")
+                    try {
+                        val screenshotDeferred = kotlinx.coroutines.CompletableDeferred<String?>()
+                        service!!.captureScreen { base64 ->
+                            if (base64 != null) {
+                                // Decode base64 → bitmap → ML Kit OCR
+                                try {
+                                    val bytes = android.util.Base64.decode(base64, android.util.Base64.DEFAULT)
+                                    val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                                    if (bitmap != null) {
+                                        val mlText = com.ai.agent.ml.MLKitHelper.tryRecognize(bitmap)
+                                        screenshotDeferred.complete(mlText)
+                                    } else {
+                                        screenshotDeferred.complete(null)
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "ML Kit bitmap decode failed", e)
+                                    screenshotDeferred.complete(null)
+                                }
+                            } else {
+                                screenshotDeferred.complete(null)
+                            }
+                        }
+                        val mlResult = screenshotDeferred.await()
+
+                        if (mlResult != null) {
+                            // Tier 2: ML Kit found text — use it (0 API calls!)
+                            ToolResult(true, "ML Kit screen text: $mlResult")
+                        } else {
+                            // Tier 3: ML Kit couldn't help — fall back to VLM
+                            Log.i(TAG, "readScreen: ML Kit found no text — falling back to VLM")
+                            val vlmResult = analyzeScreenWithVLM("Describe what's on the screen. Include app name, visible elements, and any images or icons.")
+                            ToolResult(true, "VLM analysis: $vlmResult")
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "readScreen ML Kit pipeline failed", e)
+                        // Fallback to VLM if ML Kit crashes
+                        val vlmResult = analyzeScreenWithVLM("Describe what's on the screen.")
+                        ToolResult(true, "VLM analysis: $vlmResult")
+                    }
                 }
             }
             "tap" -> {
