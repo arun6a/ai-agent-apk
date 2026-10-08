@@ -63,7 +63,7 @@ class ToolExecutor(private val context: Context) {
             "listFiles", "readFile", "writeFile", "copyFile", "moveFile", "deleteFile", "createDirectory",
             "listInstalledApps", "getAppInfo",
             "openSettings", "openAppSettings",
-            "wait", "localLLM",
+            "wait", "waitAndContinue", "localLLM",
             "openActivity", "openDeepLink", "openAppWithData", "searchInApp",
             "listAppActivities", "openWhatsAppChat", "openYouTubeVideo", "openMapsLocation",
             "playSpotify", "openInstagramProfile", "openTelegramChat",
@@ -169,6 +169,12 @@ class ToolExecutor(private val context: Context) {
                 val seconds = (call.args["seconds"] as? Number)?.toInt() ?: 2
                 delay(seconds * 1000L)
                 ToolResult(true, "waited ${seconds}s")
+            }
+            "waitAndContinue" -> {
+                val seconds = (call.args["seconds"] as? Number)?.toInt() ?: 10
+                val reason = call.args["reason"] as? String ?: "waiting"
+                delay(seconds * 1000L)
+                ToolResult(true, "Waited ${seconds}s (${reason}). Continuing — check the status now.")
             }
             // Memory tools
             "remember" -> {
