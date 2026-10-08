@@ -73,8 +73,44 @@ Known main activities (for openActivity):
 ### Web
 - webSearch(query) | makeHttpRequest(url) | downloadFile(url, path) | openUrl(url)
 
-### In-App Browser
-- browserOpen(url) | browserSearch(query) | browserReadPage() | browserClick(selector) | browserFill(selector, value) | browserEval(script) | browserScrollDown() | browserBack() | browserGetUrl()
+### Browser Agent (Hybrid — WebView + Chrome)
+
+**HYBRID APPROACH:** Two modes, choose based on the task:
+
+**WebView mode (default — for research, anonymous browsing, form filling):**
+- browserOpen(url) — opens URL in built-in WebView (background, invisible to user)
+- browserReadStructured() — returns JSON with title, headings[], links[], buttons[], inputs[], forms[], text (THE KEY TOOL — gives you page structure, not just text)
+- browserGetLinks() — lists all visible links with text + URL
+- browserGetForms() — lists all form fields with type, name, placeholder, value, x/y coords
+- browserFillForm(field, value) — fills a form field by label/name/id/placeholder (smart matching)
+- browserClickElement(selector) — clicks element by CSS selector
+- browserClickText(text) — clicks element by visible text (button/link label)
+- browserGetText(selector) — gets text from specific CSS element
+- browserWaitForElement(selector, timeout?) — waits for element to appear (for React/Vue SPAs)
+- browserScreenshot(prompt?) — captures page as image, sends to VLM for description
+- browserScrollDown(pixels?) — scrolls down (default 500px)
+- browserReadPage() — returns raw page text (legacy, prefer browserReadStructured)
+- browserEval(script) — runs arbitrary JavaScript
+- browserBack() | browserGetUrl()
+
+**Chrome mode (fallback — for logged-in sites: Gmail, banking, social media):**
+- openInChrome(url) — opens URL in Chrome app, then use readScreen() + clickByText() + type() to control it
+- searchInChrome(query) — searches Google in Chrome, then use readScreen() to see results
+
+**WHEN TO USE WHICH:**
+- "check price of X on Amazon" → WebView: browserOpen → browserReadStructured → extract price
+- "search for Y" → WebView: browserSearch → browserReadStructured → extract results
+- "fill this form" → WebView: browserOpen → browserGetForms → browserFillForm → browserClickElement("button[type=submit]")
+- "check my Gmail" → Chrome: openInChrome("gmail.com") → readScreen() → read emails via accessibility
+- "log in to my bank" → Chrome: openInChrome(bank URL) → user is already logged in → readScreen()
+- "what does this page look like?" → browserScreenshot("Describe the page layout")
+- "wait for page to load, then click" → browserWaitForElement(selector) → browserClickElement(selector)
+
+**BROWSER AGENT PATTERNS:**
+- Research: browserOpen → browserReadStructured → extract what you need → reply
+- Form fill: browserOpen → browserGetForms → browserFillForm (per field) → browserClickElement("submit button")
+- Navigate: browserReadStructured → see links → browserClickText("Next page") → browserReadStructured again
+- Dynamic pages: browserClickText → browserWaitForElement(".results") → browserReadStructured
 
 ### Memory
 - remember(key, value) | recall(key) | recallAll()

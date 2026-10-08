@@ -956,6 +956,72 @@ class ToolExecutor(private val context: Context) {
                 val text = pageText?.take(3000) ?: "Page not loaded"
                 ToolResult(true, "Searched: $query\n\nPage content:\n$text")
             }
+            // ==================== HYBRID BROWSER AGENT (v4.0.0) ====================
+            "browserReadStructured" -> {
+                val result = BrowserController.readStructured(context)
+                ToolResult(true, "Structured page data:\n$result")
+            }
+            "browserGetLinks" -> {
+                val result = BrowserController.getLinks(context)
+                ToolResult(true, "Links on page:\n$result")
+            }
+            "browserGetForms" -> {
+                val result = BrowserController.getForms(context)
+                ToolResult(true, "Form fields on page:\n$result")
+            }
+            "browserFillForm" -> {
+                val field = call.args["field"] as? String ?: return ToolResult(false, "missing field (label, name, id, or placeholder)")
+                val value = call.args["value"] as? String ?: return ToolResult(false, "missing value")
+                val filled = BrowserController.fillForm(context, field, value)
+                ToolResult(filled, if (filled) "Filled field '$field' with '$value'" else "Could not find field matching '$field'")
+            }
+            "browserClickElement" -> {
+                val selector = call.args["selector"] as? String ?: return ToolResult(false, "missing selector (CSS)")
+                val clicked = BrowserController.clickElement(context, selector)
+                ToolResult(clicked, if (clicked) "Clicked: $selector" else "Element not found: $selector")
+            }
+            "browserClickText" -> {
+                val text = call.args["text"] as? String ?: return ToolResult(false, "missing text")
+                val clicked = BrowserController.clickByText(context, text)
+                ToolResult(clicked, if (clicked) "Clicked: $text" else "Text not found: $text")
+            }
+            "browserGetText" -> {
+                val selector = call.args["selector"] as? String ?: return ToolResult(false, "missing selector (CSS)")
+                val text = BrowserController.getText(context, selector)
+                ToolResult(true, text.ifEmpty { "No text found for: $selector" })
+            }
+            "browserWaitForElement" -> {
+                val selector = call.args["selector"] as? String ?: return ToolResult(false, "missing selector (CSS)")
+                val timeout = (call.args["timeout"] as? Number)?.toLong() ?: 5000L
+                val found = BrowserController.waitForElement(context, selector, timeout)
+                ToolResult(found, if (found) "Element found: $selector" else "Timeout waiting for: $selector")
+            }
+            "browserScreenshot" -> {
+                val base64 = BrowserController.screenshot(context)
+                if (base64 != null) {
+                    // Send to VLM for analysis
+                    val prompt = call.args["prompt"] as? String ?: "Describe what's on this web page. Include any buttons, forms, prices, or important text."
+                    val vlmResult = analyzeScreenWithBase64VLM(base64, prompt)
+                    ToolResult(true, "Screenshot analyzed by VLM:\n$vlmResult")
+                } else {
+                    ToolResult(false, "Failed to capture screenshot")
+                }
+            }
+            "browserScrollDown" -> {
+                val pixels = (call.args["pixels"] as? Number)?.toInt() ?: 500
+                BrowserController.scrollDown(context, pixels)
+                ToolResult(true, "Scrolled down $pixels pixels")
+            }
+            "openInChrome" -> {
+                val url = call.args["url"] as? String ?: return ToolResult(false, "missing url")
+                val opened = BrowserController.openInChrome(context, url)
+                ToolResult(opened, if (opened) "Opened in Chrome: $url — use readScreen() + clickByText() + type() to control Chrome" else "Chrome not available")
+            }
+            "searchInChrome" -> {
+                val query = call.args["query"] as? String ?: return ToolResult(false, "missing query")
+                val opened = BrowserController.searchInChrome(context, query)
+                ToolResult(opened, if (opened) "Searched in Chrome: $query — use readScreen() to see results" else "Chrome not available")
+            }
             "localLLM" -> {
                 ToolResult(false, "Local LLM has been removed. The app now uses cloud AI (GLM-4.6) for everything, which is faster and more capable.")
             }
@@ -1567,6 +1633,64 @@ class ToolExecutor(private val context: Context) {
                 content
             } catch (e: Exception) {
                 Log.e(TAG, "VLM call failed", e)
+                "Vision error: ${e.message}"
+            }
+        }
+    }
+
+    /**
+     * Analyze a base64 image (from browser screenshot, not from accessibility service).
+     * Same logic as analyzeScreenWithVLM but takes base64 directly.
+     */
+    private suspend fun analyzeScreenWithBase64VLM(screenshotBase64: String, prompt: String): String {
+        if (screenshotBase64.isEmpty()) return "Empty screenshot"
+
+        Log.d(TAG, "VLM (base64 input): ${screenshotBase64.length} chars")
+
+        val provider = AIProvider.getCurrentProvider(context)
+        val model = AIProvider.getModel(context)
+        val apiKey = AIProvider.getApiKey(context)
+        val isVisionModel = isVisionCapableModel(provider.id, model)
+        Log.d(TAG, "VLM routing: provider=${provider.id}, model=$model, isVisionModel=$isVisionModel")
+
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val escapedPrompt = prompt.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")
+                val bodyStr = """{"model":"$model","messages":[{"role":"user","content":[{"type":"text","text":"$escapedPrompt"},{"type":"image_url","image_url":{"url":"data:image/jpeg;base64,$screenshotBase64"}}]}]}"""
+                val body = bodyStr.toRequestBody("application/json".toMediaType())
+
+                val requestBuilder = okhttp3.Request.Builder()
+                    .header("Content-Type", "application/json")
+
+                when {
+                    provider.id == "openrouter" && isVisionModel -> {
+                        requestBuilder.url(provider.defaultEndpoint)
+                        requestBuilder.header("Authorization", "Bearer $apiKey")
+                        requestBuilder.header("HTTP-Referer", "https://github.com/arun6a/ai-agent-apk")
+                        requestBuilder.header("X-Title", "AI Agent Phone")
+                    }
+                    provider.id == "groq" && isVisionModel -> {
+                        requestBuilder.url(provider.defaultEndpoint)
+                        requestBuilder.header("Authorization", "Bearer $apiKey")
+                    }
+                    else -> {
+                        requestBuilder.url(AIProvider.getVisionUrl(context))
+                    }
+                }
+
+                val request = requestBuilder.post(body).build()
+                val response = visionClient.newCall(request).execute()
+                val responseBody = response.body?.string() ?: ""
+
+                if (!response.isSuccessful) {
+                    Log.e(TAG, "VLM error ${response.code}: ${responseBody.take(300)}")
+                    return@withContext "VLM error: ${response.code}"
+                }
+
+                val json = org.json.JSONObject(responseBody)
+                json.optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("message")?.optString("content") ?: "No response from VLM"
+            } catch (e: Exception) {
+                Log.e(TAG, "VLM (base64) failed", e)
                 "Vision error: ${e.message}"
             }
         }
