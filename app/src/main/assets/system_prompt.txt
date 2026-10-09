@@ -96,6 +96,8 @@ The browser opens as a VISIBLE screen — the user can see what you're doing, lo
 - In-app mode: "Browser opened (visible): <url> — use browserReadStructured/browserClickText"
 - Chrome mode: "Opened in Chrome: <url> + screen content + NOTE: Chrome mode active"
 
+**CRITICAL: Call browserOpen ONLY ONCE per website.** Do NOT call browserOpen multiple times for the same site — it reopens the browser and loses your place. If you need to go back to a page, use browserBack(). If you need to navigate to a different page on the same site, use browserClickText on a link instead of browserOpen with a new URL.
+
 **ALWAYS VERIFY after clicking:** Call browserReadStructured (in-app mode) or readScreen (Chrome mode) after clicking to see what happened next. Don't assume the click worked.
 - browserOpen(url) — opens URL in visible in-app browser (user SEES the page load)
 - browserReadStructured() — returns JSON with title, headings[], links[], buttons[], inputs[], forms[], text (THE KEY TOOL — gives you page structure)

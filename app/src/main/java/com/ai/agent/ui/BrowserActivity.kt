@@ -42,11 +42,16 @@ class BrowserActivity : AppCompatActivity() {
 
         /**
          * Launch the browser with a specific URL.
+         * v5.0.9: Uses SINGLE_TOP + REORDER_TO_FRONT so we REUSE the existing
+         * BrowserActivity instance instead of creating a new one every time.
+         * The URL is passed via Intent extra and loaded in onNewIntent().
          */
         fun launch(context: Context, url: String) {
             val intent = Intent(context, BrowserActivity::class.java).apply {
                 putExtra(EXTRA_URL, url)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or
+                         Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                         Intent.FLAG_ACTIVITY_SINGLE_TOP)
             }
             context.startActivity(intent)
         }
@@ -141,6 +146,24 @@ class BrowserActivity : AppCompatActivity() {
         activeWebView = webView
         activeInstance = this
         Log.i(TAG, "BrowserActivity created — WebView available for AI")
+    }
+
+    /**
+     * v5.0.9: Called when launch() reuses the existing BrowserActivity instance
+     * (SINGLE_TOP + REORDER_TO_FRONT). Loads the new URL instead of creating a new activity.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val newUrl = intent.getStringExtra(EXTRA_URL)
+        if (newUrl != null) {
+            val finalUrl = if (!newUrl.startsWith("http")) "https://$newUrl" else newUrl
+            Log.i(TAG, "onNewIntent: loading new URL: $finalUrl")
+            webView.loadUrl(finalUrl)
+        }
+        // Re-establish references (in case they were cleared)
+        activeWebView = webView
+        activeInstance = this
     }
 
     private fun setupWebView() {
@@ -260,9 +283,16 @@ class BrowserActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         CookieManager.getInstance().flush()
-        activeWebView = null
-        activeInstance = null
-        Log.i(TAG, "BrowserActivity destroyed")
+        // v5.0.9: Only clear references if the activity is actually finishing
+        // (user pressed Back to close). If the system is just destroying it for
+        // memory/config change, keep the references so the AI can continue.
+        if (isFinishing) {
+            activeWebView = null
+            activeInstance = null
+            Log.i(TAG, "BrowserActivity finishing — WebView references cleared")
+        } else {
+            Log.i(TAG, "BrowserActivity destroyed (not finishing) — keeping WebView references")
+        }
     }
 
     @Deprecated("Deprecated in Java")

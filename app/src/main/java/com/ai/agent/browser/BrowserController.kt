@@ -57,18 +57,25 @@ object BrowserController {
     }
 
     /**
-     * Open a URL — ALWAYS launches BrowserActivity (visible browser) with the URL.
-     * v5.0.8: Previously, if BrowserActivity was already open, it just loaded the URL
-     * in the existing WebView — but if the user was on the chat screen, the browser
-     * was in the background (hidden). Now we ALWAYS bring BrowserActivity to foreground
-     * so the user can see what the AI is doing.
+     * Open a URL — brings BrowserActivity to foreground with the URL.
+     * v5.0.9: If the same URL is already loaded, don't reload — just bring to foreground.
+     * This prevents the AI from opening the same website multiple times.
+     * Uses SINGLE_TOP + REORDER_TO_FRONT so existing instance is reused.
      */
     fun openUrl(context: Context, url: String) {
         Log.i(TAG, "Opening URL (visible): $url")
         val finalUrl = if (!url.startsWith("http")) "https://$url" else url
 
+        // v5.0.9: If browser is already open with the same URL, just bring to foreground
+        val currentUrl = BrowserActivity.activeWebView?.url
+        if (currentUrl != null && currentUrl.contains(finalUrl.removePrefix("https://").removePrefix("http://").take(30))) {
+            Log.i(TAG, "Same URL already loaded — just bringing browser to foreground, no reload")
+            BrowserActivity.launch(context, finalUrl)
+            return
+        }
+
         pageLoadDeferred = CompletableDeferred()
-        // Always launch BrowserActivity (brings it to foreground even if already open)
+        // Launch BrowserActivity (reuses existing instance via SINGLE_TOP)
         BrowserActivity.launch(context, finalUrl)
 
         // Wait for page to load (15s timeout)
