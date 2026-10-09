@@ -256,9 +256,8 @@ class AgentAccessibilityService : AccessibilityService() {
 
     fun captureScreen(callback: (String?) -> Unit) {
         try {
-            // v6.0.2: Reflection (to avoid API 30 compile issues) + CRITICAL FIX:
-            // Copy hardware bitmap to software bitmap (ARGB_8888) before JPEG compression.
-            // The old code tried to compress a hardware bitmap directly → failed silently.
+            // v6.0.4: Multiple fallback approaches for screenshot capture.
+            // The old approach (wrapHardwareBuffer + copy) failed on many devices.
             val asClass = android.accessibilityservice.AccessibilityService::class.java
             val executor: java.util.concurrent.Executor = java.util.concurrent.Executors.newSingleThreadExecutor()
 
@@ -277,46 +276,85 @@ class AgentAccessibilityService : AccessibilityService() {
                                 val hardwareBuffer = result.hardwareBuffer
                                 val colorSpace = result.colorSpace
 
-                                // Step 1: Wrap hardware buffer → hardware bitmap
+                                // Approach 1: wrapHardwareBuffer → copy to ARGB_8888
                                 val hardwareBitmap = android.graphics.Bitmap.wrapHardwareBuffer(hardwareBuffer, colorSpace)
-                                if (hardwareBitmap == null) {
-                                    Log.e(TAG, "wrapHardwareBuffer returned null")
-                                    hardwareBuffer.close()
-                                    callback(null)
-                                    return@InvocationHandler null
-                                }
-                                Log.i(TAG, "Hardware bitmap: ${hardwareBitmap.width}x${hardwareBitmap.height} config=${hardwareBitmap.config}")
+                                if (hardwareBitmap != null) {
+                                    Log.i(TAG, "Hardware bitmap: ${hardwareBitmap.width}x${hardwareBitmap.height} config=${hardwareBitmap.config}")
+                                    val softwareBitmap = hardwareBitmap.copy(android.graphics.Bitmap.Config.ARGB_8888, false)
+                                    hardwareBitmap.recycle()
 
-                                // Step 2: CRITICAL FIX — copy to software bitmap (ARGB_8888)
-                                // Hardware bitmaps CANNOT be compressed to JPEG!
-                                val softwareBitmap = hardwareBitmap.copy(android.graphics.Bitmap.Config.ARGB_8888, false)
-                                hardwareBitmap.recycle()
+                                    if (softwareBitmap != null) {
+                                        Log.i(TAG, "Software bitmap (approach 1): ${softwareBitmap.width}x${softwareBitmap.height}")
+                                        hardwareBuffer.close()
+                                        val b64 = compressToBase64(softwareBitmap)
+                                        softwareBitmap.recycle()
+                                        callback(b64)
+                                        return@InvocationHandler null
+                                    } else {
+                                        Log.w(TAG, "copy(ARGB_8888) failed — trying approach 2")
+                                    }
+                                } else {
+                                    Log.w(TAG, "wrapHardwareBuffer returned null — trying approach 2")
+                                }
+
+                                // Approach 2: Create bitmap manually from HardwareBuffer dimensions
+                                try {
+                                    val w = hardwareBuffer.width
+                                    val h = hardwareBuffer.height
+                                    Log.i(TAG, "Approach 2: creating ${w}x${h} bitmap from hardware buffer")
+                                    val softwareBitmap = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+
+                                    // Use PixelCopy to copy from hardware buffer to our bitmap
+                                    // This is the fallback when wrapHardwareBuffer fails
+                                    val pixelCopyResult = intArrayOf(-1)
+                                    val pixelCopyLatch = java.util.concurrent.CountDownLatch(1)
+
+                                    // PixelCopy.request with HardwareBuffer (API 34+)
+                                    if (android.os.Build.VERSION.SDK_INT >= 34) {
+                                        try {
+                                            val pixelCopyClass = Class.forName("android.view.PixelCopy")
+                                            val requestMethod = pixelCopyClass.getMethod("request",
+                                                android.hardware.HardwareBuffer::class.java,
+                                android.graphics.Bitmap::class.java,
+                                                java.util.concurrent.Executor::class.java,
+                                                Class.forName("android.view.PixelCopy\$OnPixelCopyFinishedListener"))
+                                            val listener = java.lang.reflect.Proxy.newProxyInstance(
+                                                Class.forName("android.view.PixelCopy\$OnPixelCopyFinishedListener").classLoader,
+                                                arrayOf(Class.forName("android.view.PixelCopy\$OnPixelCopyFinishedListener")),
+                                                java.lang.reflect.InvocationHandler { _, m, a ->
+                                                    if (m.name == "onPixelCopyFinished") {
+                                                        pixelCopyResult[0] = a[0] as Int
+                                                        pixelCopyLatch.countDown()
+                                                    }
+                                                    null
+                                                }
+                                            )
+                                            requestMethod.invoke(null, hardwareBuffer, softwareBitmap, executor, listener)
+                                            pixelCopyLatch.await(5, java.util.concurrent.TimeUnit.SECONDS)
+                                        } catch (e: Exception) {
+                                            Log.w(TAG, "PixelCopy approach failed: ${e.message}")
+                                        }
+                                    }
+
+                                    if (pixelCopyResult[0] == 1) { // SUCCESS
+                                        Log.i(TAG, "Software bitmap (approach 2): ${softwareBitmap.width}x${softwareBitmap.height}")
+                                        hardwareBuffer.close()
+                                        val b64 = compressToBase64(softwareBitmap)
+                                        softwareBitmap.recycle()
+                                        callback(b64)
+                                        return@InvocationHandler null
+                                    } else {
+                                        Log.w(TAG, "PixelCopy failed (result=${pixelCopyResult[0]}) — trying approach 3")
+                                        softwareBitmap.recycle()
+                                    }
+                                } catch (e: Exception) {
+                                    Log.w(TAG, "Approach 2 failed: ${e.message}")
+                                }
+
+                                // Approach 3: Just close and return null — use readScreen text fallback
                                 hardwareBuffer.close()
-
-                                if (softwareBitmap == null) {
-                                    Log.e(TAG, "copy to ARGB_8888 failed — bitmap config=${hardwareBitmap.config}")
-                                    callback(null)
-                                    return@InvocationHandler null
-                                }
-                                Log.i(TAG, "Software bitmap: ${softwareBitmap.width}x${softwareBitmap.height}")
-
-                                // Step 3: Scale down + compress to JPEG
-                                val w = softwareBitmap.width
-                                val h = softwareBitmap.height
-                                val scaled = if (w > 480) {
-                                    val r = 480f / w
-                                    android.graphics.Bitmap.createScaledBitmap(softwareBitmap, 480, (h * r).toInt(), true)
-                                } else softwareBitmap
-
-                                val stream = java.io.ByteArrayOutputStream()
-                                scaled.compress(android.graphics.Bitmap.CompressFormat.JPEG, 70, stream)
-                                val b64 = android.util.Base64.encodeToString(stream.toByteArray(), android.util.Base64.NO_WRAP)
-                                Log.i(TAG, "Screenshot done: ${stream.toByteArray().size} bytes, base64: ${b64.length} chars")
-
-                                if (scaled !== softwareBitmap) scaled.recycle()
-                                softwareBitmap.recycle()
-
-                                callback(b64)
+                                Log.e(TAG, "All screenshot approaches failed")
+                                callback(null)
                             } catch (e: Exception) {
                                 Log.e(TAG, "Screenshot processing failed", e)
                                 callback(null)
@@ -337,5 +375,25 @@ class AgentAccessibilityService : AccessibilityService() {
             Log.e(TAG, "takeScreenshot error", e)
             callback(null)
         }
+    }
+
+    /**
+     * Scale + compress bitmap to JPEG base64.
+     */
+    private fun compressToBase64(bitmap: android.graphics.Bitmap): String {
+        val w = bitmap.width
+        val h = bitmap.height
+        val scaled = if (w > 480) {
+            val r = 480f / w
+            android.graphics.Bitmap.createScaledBitmap(bitmap, 480, (h * r).toInt(), true)
+        } else bitmap
+
+        val stream = java.io.ByteArrayOutputStream()
+        scaled.compress(android.graphics.Bitmap.CompressFormat.JPEG, 70, stream)
+        val b64 = android.util.Base64.encodeToString(stream.toByteArray(), android.util.Base64.NO_WRAP)
+        Log.i(TAG, "Screenshot done: ${stream.toByteArray().size} bytes, base64: ${b64.length} chars")
+
+        if (scaled !== bitmap) scaled.recycle()
+        return b64
     }
 }

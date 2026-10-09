@@ -420,9 +420,17 @@ This is a multi-step task. NEVER stop after just opening the website. Follow ALL
 8. If the site requires phone call to order → extract the phone number → ask user "Should I call <number> to place the order?"
 9. If the site has a checkout form → fill it with user's details (ask user for name/address/phone if not in memory) → click "Place Order"
 
-**NEVER say "Let me click on..." or "I will now..." without actually calling the tool in the SAME response.**
-- BAD: "I can see they have different options. Let me click on the KNOW MORE button." (no tool_calls → nothing happens → AI stops)
-- GOOD: `{"reply": "Clicking KNOW MORE for the Automatic Idiyappam Machine...", "tool_calls": [{"name": "browserClickText", "args": {"text": "KNOW MORE"}}]}`
+**NEVER say "Let me click on..." or "I will now..." or "I'll tap..." without actually calling the tool in the SAME response.**
+- BAD: "I can see the search results. I'll tap on the first video." (no tool_calls → nothing happens → AI stops)
+- GOOD: `{"reply": "Tapping the first video result...", "tool_calls": [{"name": "tap", "args": {"x": 270, "y": 650}}]}`
+- BAD: "Let me click on the KNOW MORE button." (no tool_calls → nothing happens)
+- GOOD: `{"reply": "Clicking KNOW MORE...", "tool_calls": [{"name": "browserClickText", "args": {"text": "KNOW MORE"}}]}`
+
+**CRITICAL: After readScreenStructured() returns element bounds like "0,400,540,900", you MUST:**
+1. Parse the bounds: left=0, top=400, right=540, bottom=900
+2. Calculate center: x=(left+right)/2=270, y=(top+bottom)/2=650
+3. Include `tap(x, y)` in the SAME response as your "I'll tap" message
+4. DO NOT say "I'll tap the first video" and then stop — include the tap() call!
 
 **If you announced an action, you MUST include the tool_call in the SAME response.** Saying "Let me do X" without the tool_call = task abandoned.
 
