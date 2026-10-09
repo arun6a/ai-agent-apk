@@ -134,13 +134,13 @@ class LLMClient(private val context: Context) {
                 }
 
                 // Parse response based on provider format
-                val content = when (provider.id) {
+                val llmResponse = when (provider.id) {
                     "gemini" -> parseGeminiResponse(responseBody)
                     else -> parseOpenAIResponse(responseBody)
                 }
 
-                Log.d("LLMClient", "Response: ${content.take(200)}...")
-                return@withContext parseResponse(content)
+                Log.d("LLMClient", "Response: ${(llmResponse.reply + llmResponse.toolCalls.toString()).take(200)}...")
+                return@withContext llmResponse
             } catch (e: Exception) {
                 Log.e("LLMClient", "Request failed (attempt $attempt)", e)
                 lastError = e.message
@@ -172,9 +172,50 @@ class LLMClient(private val context: Context) {
             if (providerId == "zai") {
                 put("thinking", JSONObject().put("type", "disabled"))
             }
+            // For providers that support native function calling, use it.
+            // This is MUCH more reliable than asking the LLM to write JSON in the reply.
+            // The LLM returns tool_calls as a structured field, not as text.
+            if (providerId in setOf("groq", "openrouter", "together", "custom")) {
+                put("tools", buildToolsArray())
+                put("tool_choice", "auto")
+                // Some providers (Groq, OpenRouter) support response_format for stricter output
+                if (providerId == "groq") {
+                    put("response_format", JSONObject().put("type", "json_object"))
+                }
+            }
         }
 
         return body.toString()
+    }
+
+    /**
+     * Build the OpenAI-compatible "tools" array describing all available tools.
+     * Used with native function calling (Groq, OpenRouter, Together, Custom).
+     *
+     * This is FAR more reliable than asking the LLM to write JSON in the reply text —
+     * the model returns structured tool_calls directly, no parsing needed.
+     */
+    private fun buildToolsArray(): JSONArray {
+        val tools = JSONArray()
+        val toolNames = com.ai.agent.tools.ToolExecutor.getAvailableToolNames()
+        for (name in toolNames) {
+            val parameters = JSONObject()
+                .put("type", "object")
+                .put("properties", JSONObject())
+                .put("additionalProperties", true)
+
+            val function = JSONObject()
+                .put("name", name)
+                .put("description", "Execute the $name tool on the Android phone")
+                .put("parameters", parameters)
+
+            val tool = JSONObject()
+                .put("type", "function")
+                .put("function", function)
+
+            tools.put(tool)
+        }
+        return tools
     }
 
     /**
@@ -201,9 +242,15 @@ class LLMClient(private val context: Context) {
     /**
      * Parse OpenAI-format response (used by OpenRouter, Z.ai, custom).
      */
-    private fun parseOpenAIResponse(responseBody: String): String {
+    /**
+     * Parse OpenAI-compatible response.
+     * Handles BOTH:
+     * - Native function calling: tool_calls in message.tool_calls (Groq, OpenRouter, etc.)
+     * - Manual JSON in content: {"reply": "...", "tool_calls": [...]} (Z.ai, older models)
+     */
+    private fun parseOpenAIResponse(responseBody: String): LLMResponse {
         val json = JSONObject(responseBody)
-        
+
         // Track token usage
         try {
             val usage = json.optJSONObject("usage")
@@ -216,21 +263,59 @@ class LLMClient(private val context: Context) {
         } catch (e: Exception) {
             Log.w("LLMClient", "Could not parse usage: ${e.message}")
         }
-        
-        return json
+
+        val message = json
             .optJSONArray("choices")
             ?.optJSONObject(0)
             ?.optJSONObject("message")
-            ?.optString("content")
-            ?: "No response from AI"
+
+        if (message == null) {
+            return LLMResponse("No response from AI", emptyList())
+        }
+
+        // Path 1: Native function calling — tool_calls is a JSON array in the message
+        val nativeToolCalls = message.optJSONArray("tool_calls")
+        if (nativeToolCalls != null && nativeToolCalls.length() > 0) {
+            val toolCalls = mutableListOf<ToolCall>()
+            for (i in 0 until nativeToolCalls.length()) {
+                val tc = nativeToolCalls.optJSONObject(i) ?: continue
+                val function = tc.optJSONObject("function") ?: continue
+                val name = function.optString("name", "")
+                val argsStr = function.optString("arguments", "{}")
+                val args = mutableMapOf<String, Any>()
+                try {
+                    val argsJson = JSONObject(argsStr)
+                    val keys = argsJson.keys()
+                    while (keys.hasNext()) {
+                        val key = keys.next()
+                        args[key] = argsJson.get(key)
+                    }
+                } catch (e: Exception) {
+                    Log.w("LLMClient", "Could not parse tool args: $argsStr")
+                }
+                if (name.isNotEmpty()) {
+                    toolCalls.add(ToolCall(name, args))
+                }
+            }
+            val content = message.optString("content", "")
+            Log.i("LLMClient", "Native function calling: ${toolCalls.size} tool call(s): ${toolCalls.map { it.name }}")
+            return LLMResponse(content.ifEmpty { "Executing..." }, toolCalls)
+        }
+
+        // Path 2: Manual JSON in content (Z.ai, older models)
+        val content = message.optString("content")
+        if (content.isBlank()) {
+            return LLMResponse("(empty response)", emptyList())
+        }
+        return parseResponse(content)
     }
 
     /**
      * Parse Gemini-format response.
      */
-    private fun parseGeminiResponse(responseBody: String): String {
+    private fun parseGeminiResponse(responseBody: String): LLMResponse {
         val json = JSONObject(responseBody)
-        
+
         // Track token usage (Gemini returns usageMetadata)
         try {
             val usage = json.optJSONObject("usageMetadata")
@@ -242,7 +327,7 @@ class LLMClient(private val context: Context) {
         } catch (e: Exception) {
             Log.w("LLMClient", "Could not parse Gemini usage: ${e.message}")
         }
-        
+
         val candidates = json.optJSONArray("candidates")
         val content = candidates
             ?.optJSONObject(0)
@@ -251,7 +336,8 @@ class LLMClient(private val context: Context) {
             ?.optJSONObject(0)
             ?.optString("text")
             ?: "No response from Gemini"
-        return content
+        // Gemini uses manual JSON format (no native function calling in our impl)
+        return parseResponse(content)
     }
 
     /**

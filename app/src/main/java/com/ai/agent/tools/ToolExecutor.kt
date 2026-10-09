@@ -20,6 +20,62 @@ class ToolExecutor(private val context: Context) {
 
     companion object {
         private const val TAG = "ToolExecutor"
+
+        /**
+         * The complete list of tool names the agent supports.
+         * Used by LLMClient to build the "tools" array for native function calling
+         * (Groq, OpenRouter, Together — they get structured tool_calls back, no JSON parsing).
+         */
+        fun getAvailableToolNames(): List<String> = listOf(
+            // Screen
+            "readScreen", "readScreenStructured", "tap", "clickByText", "type", "swipe",
+            "scrollDown", "scrollUp", "pressBack", "pressHome", "pressEnter", "submitInput",
+            "lockScreen", "takeScreenshotToGallery",
+            // Apps
+            "launchApp", "listInstalledApps", "getAppInfo", "forceStopApp", "uninstallApp",
+            "openDialer", "openContact", "openSettings", "shareText", "shareFile",
+            // Vision
+            "analyzeScreen", "findElement", "translateText",
+            // Browser
+            "browserOpen", "browserReadStructured", "browserReadPage", "browserGetLinks",
+            "browserGetForms", "browserFillForm", "browserClickElement", "browserClickText",
+            "browserGetText", "browserWaitForElement", "browserScreenshot", "browserScrollDown",
+            "browserEval", "browserBack", "browserGetUrl", "browserSearch", "browserFill",
+            "browserClick", "openInChrome", "searchInChrome",
+            // Web
+            "webSearch", "makeHttpRequest", "downloadFile", "openUrl",
+            // Device
+            "getBatteryLevel", "getCurrentTime", "getBluetoothState", "getNetworkInfo",
+            "getDeviceInfo", "pingHost", "getVolume", "setVolume", "setBrightness",
+            "toggleFlashlight", "toggleWifi",
+            // Memory
+            "remember", "recall", "recallAll", "recallSimilar", "searchMemory",
+            "getClipboard", "setClipboard",
+            // Location
+            "getCurrentLocation", "openMaps",
+            // Rules
+            "createRule", "listRules", "deleteRule", "modifyRule",
+            // Contacts & Phone
+            "readContacts", "searchContacts",
+            "getCalendarEvents", "createCalendarEvent", "setAlarm", "setTimer",
+            "sendSMS", "callContact", "getCallLog", "sendEmail",
+            "openDialer", "makePhoneCall", "composeEmail",
+            // Files
+            "listFiles", "readFile", "writeFile", "copyFile", "moveFile", "deleteFile", "createDirectory",
+            // Activity shortcuts
+            "openActivity", "openDeepLink", "openAppWithData", "searchInApp",
+            "listAppActivities", "openWhatsAppChat", "openYouTubeVideo", "openMapsLocation",
+            "playSpotify", "openInstagramProfile", "openTelegramChat",
+            "openGoogleSearch", "shareToApp",
+            // Notification
+            "replyToNotification",
+            // Media
+            "mediaPlayPause", "mediaNext", "mediaPrevious", "takePhoto",
+            // Skills
+            "executeSkill", "listSkills",
+            // Async
+            "wait", "waitAndContinue"
+        )
     }
 
     private val database = AgentDatabase(context)
