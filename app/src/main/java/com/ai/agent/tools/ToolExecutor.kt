@@ -744,12 +744,15 @@ class ToolExecutor(private val context: Context) {
             }
             "webSearch" -> {
                 val query = call.args["query"] as? String ?: return ToolResult(false, "missing query")
+                val searchMethod = AIProvider.getSearchMethod(context)
                 try {
-                    // v5.1.0: Direct web search via DuckDuckGo HTML — NO PROXY NEEDED
-                    // The phone fetches search results directly from duckduckgo.com/html
-                    // and extracts titles + snippets + URLs.
                     val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
-                    val searchUrl = "https://html.duckduckgo.com/html/?q=$encodedQuery"
+                    val (searchUrl, parseMode) = when (searchMethod) {
+                        "google" -> "https://www.google.com/search?q=$encodedQuery" to "google"
+                        "bing" -> "https://www.bing.com/search?q=$encodedQuery&setlang=en" to "bing"
+                        "proxy" -> AIProvider.getWebSearchUrl(context) to "proxy"
+                        else -> "https://html.duckduckgo.com/html/?q=$encodedQuery" to "duckduckgo"
+                    }
                     val client = okhttp3.OkHttpClient.Builder()
                         .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
                         .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
@@ -757,66 +760,57 @@ class ToolExecutor(private val context: Context) {
                     val request = okhttp3.Request.Builder()
                         .url(searchUrl)
                         .header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36")
+                        .apply {
+                            if (parseMode == "proxy") {
+                                header("Content-Type", "application/json")
+                                post("""{"query":"$query","num":5}""".toRequestBody("application/json".toMediaType()))
+                            }
+                        }
                         .build()
                     val response = client.newCall(request).execute()
-                    val html = response.body?.string() ?: ""
+                    val body = response.body?.string() ?: ""
 
-                    // Extract results from DuckDuckGo HTML
-                    // Pattern: <a class="result__a" href="...">Title</a> ... <a class="result__snippet">Snippet</a>
                     val results = StringBuilder()
-                    val resultPattern = Regex(
-                        """<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>.*?<a[^>]*class="result__snippet"[^>]*>(.*?)</a>""",
-                        RegexOption.DOT_MATCHES_ALL
-                    )
-                    val matches = resultPattern.findAll(html).take(8)
-                    var count = 0
-                    for (match in matches) {
-                        count++
-                        var url = match.groupValues[1]
-                        // DuckDuckGo wraps URLs in a redirect — extract actual URL
-                        val uddgMatch = Regex("uddg=([^&]+)").find(url)
-                        if (uddgMatch != null) {
-                            url = java.net.URLDecoder.decode(uddgMatch.groupValues[1], "UTF-8")
-                        }
-                        val title = match.groupValues[2].replace(Regex("<[^>]+>"), "").trim()
-                        val snippet = match.groupValues[3].replace(Regex("<[^>]+>"), "").trim()
-                        results.append("$count. $title\n   $snippet\n   $url\n\n")
-                    }
 
-                    if (count == 0) {
-                        // Fallback: try the old proxy-based search if direct fails
-                        val proxyUrl = AIProvider.getWebSearchUrl(context)
-                        try {
-                            val proxyClient = okhttp3.OkHttpClient.Builder()
-                                .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
-                                .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-                                .build()
-                            val proxyBody = """{"query":"$query","num":5}"""
-                                .toRequestBody("application/json".toMediaType())
-                            val proxyRequest = okhttp3.Request.Builder()
-                                .url(proxyUrl)
-                                .header("Content-Type", "application/json")
-                                .post(proxyBody)
-                                .build()
-                            val proxyResponse = proxyClient.newCall(proxyRequest).execute()
-                            val proxyResponseBody = proxyResponse.body?.string() ?: "{}"
-                            val parsed = org.json.JSONObject(proxyResponseBody)
-                            val json = parsed.optJSONArray("results") ?: org.json.JSONArray()
-                            for (i in 0 until json.length()) {
-                                val item = json.optJSONObject(i) ?: continue
-                                results.append("${i+1}. ${item.optString("name")}\n   ${item.optString("snippet")}\n   ${item.optString("url")}\n\n")
+                    if (parseMode == "proxy") {
+                        // Proxy returns JSON
+                        val parsed = org.json.JSONObject(body)
+                        val json = parsed.optJSONArray("results") ?: org.json.JSONArray()
+                        for (i in 0 until json.length()) {
+                            val item = json.optJSONObject(i) ?: continue
+                            results.append("${i+1}. ${item.optString("name")}\n   ${item.optString("snippet")}\n   ${item.optString("url")}\n\n")
+                        }
+                    } else {
+                        // HTML parsing — extract results based on search engine
+                        val resultPattern = when (parseMode) {
+                            "google" -> Regex("""<h3[^>]*>(.*?)</h3>.*?<a[^>]*href="/url\?q=([^&]+)""", RegexOption.DOT_MATCHES_ALL)
+                            "bing" -> Regex("""<h2[^>]*><a[^>]*href="([^"]+)"[^>]*>(.*?)</a>""", RegexOption.DOT_MATCHES_ALL)
+                            else -> Regex("""<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>.*?<a[^>]*class="result__snippet"[^>]*>(.*?)</a>""", RegexOption.DOT_MATCHES_ALL)
+                        }
+                        val matches = resultPattern.findAll(body).take(8)
+                        var count = 0
+                        for (match in matches) {
+                            count++
+                            var url = match.groupValues[1]
+                            // DuckDuckGo wraps URLs in redirect
+                            val uddgMatch = Regex("uddg=([^&]+)").find(url)
+                            if (uddgMatch != null) {
+                                url = java.net.URLDecoder.decode(uddgMatch.groupValues[1], "UTF-8")
                             }
-                        } catch (_: Exception) { }
+                            val title = match.groupValues[2].replace(Regex("<[^>]+>"), "").trim()
+                            val snippet = if (match.groupValues.size > 3) match.groupValues[3].replace(Regex("<[^>]+>"), "").trim() else ""
+                            results.append("$count. $title\n   $snippet\n   $url\n\n")
+                        }
                     }
 
                     if (results.isEmpty()) {
-                        ToolResult(true, "No results found for: $query\n\nDirect search via DuckDuckGo returned no parseable results. Try fetchPageText on a specific URL.")
+                        ToolResult(true, "No results found for: $query (via $searchMethod). Try a different search method in Settings, or use fetchPageText on a specific URL.")
                     } else {
                         ToolResult(true, results.toString())
                     }
                 } catch (e: Exception) {
                     val errorMsg = e.message ?: e.toString()
-                    ToolResult(false, "Search error: $errorMsg")
+                    ToolResult(false, "Search error ($searchMethod): $errorMsg")
                 }
             }
             // === CALL LOG ===

@@ -210,6 +210,23 @@ object AIProvider {
     fun getWebSearchUrl(context: Context): String =
         getProxyBaseUrl(context).trimEnd('/') + "/api/web-search"
 
+    // === Search Method (v5.1.1) ===
+    // Controls which search engine webSearch() uses:
+    // "duckduckgo" → DuckDuckGo HTML (default, works directly, no proxy)
+    // "google" → Google search (may get blocked by anti-bot)
+    // "bing" → Bing search
+    // "proxy" → sandbox proxy (needs sandbox running)
+    private const val KEY_SEARCH_METHOD = "search_method"
+    val DEFAULT_SEARCH_METHOD = "duckduckgo"
+
+    fun getSearchMethod(context: Context): String {
+        return getPrefs(context).getString(KEY_SEARCH_METHOD, DEFAULT_SEARCH_METHOD) ?: DEFAULT_SEARCH_METHOD
+    }
+
+    fun setSearchMethod(context: Context, method: String) {
+        getPrefs(context).edit().putString(KEY_SEARCH_METHOD, method).apply()
+    }
+
     // === Browser Mode ===
     // Controls which browser the AI uses:
     // "in_app" → visible in-app WebView (no accessibility needed, user can see + intervene)

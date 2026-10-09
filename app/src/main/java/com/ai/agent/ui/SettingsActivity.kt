@@ -176,6 +176,50 @@ class SettingsActivity : AppCompatActivity() {
             recreate()
         }
 
+        // === Search Method (v5.1.1) ===
+        layout.addView(SectionTitle("Search Method"))
+        val currentSearch = com.ai.agent.llm.AIProvider.getSearchMethod(this)
+        layout.addView(InfoText(
+            "Current: ${currentSearch.uppercase()}\n\n" +
+            "DuckDuckGo: Direct, no proxy needed (default, most reliable)\n" +
+            "Google: May get blocked by anti-bot\n" +
+            "Bing: Microsoft search, works but messier results\n" +
+            "Proxy: Sandbox proxy (needs sandbox running)\n\n" +
+            "webSearch() uses this method. fetchPageText always works directly."
+        ))
+
+        val searchButtons = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val btnDDG = Button(this).apply { text = "🦆 DuckDuckGo" }
+        val btnGoogle = Button(this).apply { text = "🔍 Google" }
+        val btnBing = Button(this).apply { text = "🅱️ Bing" }
+        val btnProxySearch = Button(this).apply { text = "🌐 Proxy" }
+        searchButtons.addView(btnDDG)
+        searchButtons.addView(btnGoogle)
+        searchButtons.addView(btnBing)
+        searchButtons.addView(btnProxySearch)
+        layout.addView(searchButtons)
+
+        btnDDG.setOnClickListener {
+            com.ai.agent.llm.AIProvider.setSearchMethod(this, "duckduckgo")
+            Toast.makeText(this, "Search method: DuckDuckGo (direct, no proxy)", Toast.LENGTH_SHORT).show()
+            recreate()
+        }
+        btnGoogle.setOnClickListener {
+            com.ai.agent.llm.AIProvider.setSearchMethod(this, "google")
+            Toast.makeText(this, "Search method: Google (may get blocked)", Toast.LENGTH_SHORT).show()
+            recreate()
+        }
+        btnBing.setOnClickListener {
+            com.ai.agent.llm.AIProvider.setSearchMethod(this, "bing")
+            Toast.makeText(this, "Search method: Bing", Toast.LENGTH_SHORT).show()
+            recreate()
+        }
+        btnProxySearch.setOnClickListener {
+            com.ai.agent.llm.AIProvider.setSearchMethod(this, "proxy")
+            Toast.makeText(this, "Search method: Proxy (needs sandbox)", Toast.LENGTH_SHORT).show()
+            recreate()
+        }
+
         // === Battery Optimization (MIUI fix) ===
         layout.addView(SectionTitle("Battery Optimization (MIUI/Xiaomi)"))
         layout.addView(InfoText(
