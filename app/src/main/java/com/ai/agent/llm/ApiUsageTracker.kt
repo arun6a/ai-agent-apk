@@ -124,6 +124,17 @@ object ApiUsageTracker {
     }
 
     /**
+     * Get today's stats as Pair(calls, totalTokens) — for AgentFragment UI.
+     */
+    fun getTodayStats(context: Context): Pair<Int, Int> {
+        val prefs = getPrefs(context)
+        val calls = prefs.getInt(KEY_TOTAL_CALLS, 0)
+        val prompt = prefs.getInt(KEY_TOTAL_PROMPT_TOKENS, 0)
+        val completion = prefs.getInt(KEY_TOTAL_COMPLETION_TOKENS, 0)
+        return Pair(calls, prompt + completion)
+    }
+
+    /**
      * Get full report for Settings.
      */
     fun getFullReport(context: Context): String {

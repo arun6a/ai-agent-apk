@@ -4,9 +4,23 @@
     <color name="bg_surface_variant">#FF27272A</color>
     <color name="accent_emerald">#FF059669</color>
     <color name="accent_emerald_light">#FF10B981</color>
+    <color name="accent_emerald_dim">#FF064E3B</color>
     <color name="accent_red">#FFDC2626</color>
     <color name="text_primary">#FFFAFAFA</color>
     <color name="text_secondary">#FFA1A1AA</color>
     <color name="text_muted">#FF52525B</color>
     <color name="border">#FF3F3F46</color>
+
+    <!-- v6.0.0: Status orb colors -->
+    <color name="accent_amber">#FFF59E0B</color>
+    <color name="status_idle">#FF52525B</color>
+    <color name="status_listening">#FF10B981</color>
+    <color name="status_thinking">#FFF59E0B</color>
+    <color name="status_working">#FF10B981</color>
+    <color name="status_done">#FF059669</color>
+    <color name="status_error">#FFDC2626</color>
+
+    <!-- v6.0.0: Bottom nav -->
+    <color name="nav_active">#FF10B981</color>
+    <color name="nav_inactive">#FF52525B</color>
 </resources>

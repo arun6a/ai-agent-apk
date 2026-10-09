@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_dark"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Status banner -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@color/bg_surface"
+            android:padding="16dp"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:id="@+id/agentStatusText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Status: Ready"
+                android:textColor="@color/accent_emerald_light"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/agentProviderText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Provider: ..."
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:layout_marginTop="4dp" />
+
+            <TextView
+                android:id="@+id/agentUsageText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Today: 0 calls · 0 tokens"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <!-- Quick actions grid -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <Button
+                android:id="@+id/btnOpenBrowser"
+                android:layout_width="0dp"
+                android:layout_height="60dp"
+                android:layout_weight="1"
+                android:text="🌐\nBrowser"
+                android:textSize="11sp"
+                android:background="@color/bg_surface_variant"
+                android:textColor="@color/text_primary"
+                android:layout_marginEnd="4dp" />
+
+            <Button
+                android:id="@+id/btnOpenSettings"
+                android:layout_width="0dp"
+                android:layout_height="60dp"
+                android:layout_weight="1"
+                android:text="⚙️\nSettings"
+                android:textSize="11sp"
+                android:background="@color/bg_surface_variant"
+                android:textColor="@color/text_primary"
+                android:layout_marginStart="4dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <Button
+                android:id="@+id/btnCheckAccessibility"
+                android:layout_width="0dp"
+                android:layout_height="60dp"
+                android:layout_weight="1"
+                android:text="♿\nAccessibility"
+                android:textSize="11sp"
+                android:background="@color/bg_surface_variant"
+                android:textColor="@color/text_primary"
+                android:layout_marginEnd="4dp" />
+
+            <Button
+                android:id="@+id/btnCheckOverlay"
+                android:layout_width="0dp"
+                android:layout_height="60dp"
+                android:layout_weight="1"
+                android:text="👁\nOverlay"
+                android:textSize="11sp"
+                android:background="@color/bg_surface_variant"
+                android:textColor="@color/text_primary"
+                android:layout_marginStart="4dp" />
+        </LinearLayout>
+
+        <!-- Skills + Plugins -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@color/bg_surface"
+            android:padding="14dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Skills &amp; Plugins"
+                android:textColor="@color/text_primary"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/agentSkillsText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Skills: 0 · Plugins: 0"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp"
+                android:layout_marginTop="4dp" />
+        </LinearLayout>
+
+        <!-- Memory + Knowledge -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@color/bg_surface"
+            android:padding="14dp"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Memory &amp; Knowledge"
+                android:textColor="@color/text_primary"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/agentMemoryText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Memory: 0 facts · Knowledge: 0 docs"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp"
+                android:layout_marginTop="4dp" />
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

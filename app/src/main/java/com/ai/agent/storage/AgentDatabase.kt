@@ -13,7 +13,7 @@ class AgentDatabase(context: Context) : SQLiteOpenHelper(context, DB_NAME, null,
 
     companion object {
         private const val DB_NAME = "ai_agent.db"
-        private const val DB_VERSION = 2
+        private const val DB_VERSION = 3  // v6.0.0: added knowledge table
 
         // Conversations table
         const val TABLE_CONVERSATIONS = "conversations"
@@ -39,6 +39,11 @@ class AgentDatabase(context: Context) : SQLiteOpenHelper(context, DB_NAME, null,
         // Action log
         const val TABLE_LOG = "action_log"
         const val COL_ACTION_TEXT = "action_text"
+
+        // v6.0.0: Knowledge table (documents, longer content)
+        const val TABLE_KNOWLEDGE = "knowledge"
+        const val COL_CONTENT = "content"
+        const val COL_SOURCE = "source"
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -77,12 +82,22 @@ class AgentDatabase(context: Context) : SQLiteOpenHelper(context, DB_NAME, null,
                 $COL_TIMESTAMP INTEGER
             )
         """.trimIndent())
+
+        // v6.0.0: Knowledge table (for documents, longer content — separate from memory)
+        db.execSQL("""
+            CREATE TABLE $TABLE_KNOWLEDGE (
+                $COL_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                $COL_NAME TEXT,
+                $COL_CONTENT TEXT,
+                $COL_SOURCE TEXT,
+                $COL_TIMESTAMP INTEGER
+            )
+        """.trimIndent())
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         if (oldVersion < 2) {
             // v2: add `days` column to rules table for day-of-week scheduling.
-            // Existing rules get NULL days (= daily), preserving their old behavior.
             try {
                 db.execSQL("ALTER TABLE $TABLE_RULES ADD COLUMN $COL_DAYS TEXT")
                 android.util.Log.i("AgentDatabase", "Upgraded DB to v2 — added $COL_DAYS column to rules")
@@ -95,6 +110,82 @@ class AgentDatabase(context: Context) : SQLiteOpenHelper(context, DB_NAME, null,
                 onCreate(db)
             }
         }
+        if (oldVersion < 3) {
+            // v6.0.0: add knowledge table for documents
+            try {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS $TABLE_KNOWLEDGE (
+                        $COL_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        $COL_NAME TEXT,
+                        $COL_CONTENT TEXT,
+                        $COL_SOURCE TEXT,
+                        $COL_TIMESTAMP INTEGER
+                    )
+                """.trimIndent())
+                android.util.Log.i("AgentDatabase", "Upgraded DB to v3 — added knowledge table")
+            } catch (e: Exception) {
+                android.util.Log.e("AgentDatabase", "Failed to create knowledge table", e)
+            }
+        }
+    }
+
+    // === Knowledge (v6.0.0) ===
+
+    fun saveKnowledge(name: String, content: String, source: String = "manual") {
+        val values = ContentValues().apply {
+            put(COL_NAME, name)
+            put(COL_CONTENT, content)
+            put(COL_SOURCE, source)
+            put(COL_TIMESTAMP, System.currentTimeMillis())
+        }
+        writableDatabase.insertWithOnConflict(TABLE_KNOWLEDGE, null, values, android.database.sqlite.SQLiteDatabase.CONFLICT_REPLACE)
+    }
+
+    fun getAllKnowledge(): List<Triple<String, String, String>> {
+        val result = mutableListOf<Triple<String, String, String>>()
+        val cursor = readableDatabase.query(
+            TABLE_KNOWLEDGE, arrayOf(COL_NAME, COL_CONTENT, COL_SOURCE),
+            null, null, null, null, "$COL_TIMESTAMP DESC"
+        )
+        cursor.use {
+            while (it.moveToNext()) {
+                result.add(Triple(
+                    it.getString(it.getColumnIndexOrThrow(COL_NAME)) ?: "",
+                    it.getString(it.getColumnIndexOrThrow(COL_CONTENT)) ?: "",
+                    it.getString(it.getColumnIndexOrThrow(COL_SOURCE)) ?: ""
+                ))
+            }
+        }
+        return result
+    }
+
+    fun recallKnowledge(query: String, limit: Int = 5): List<Triple<String, String, Float>> {
+        val all = getAllKnowledge()
+        if (all.isEmpty()) return emptyList()
+        val queryWords = query.lowercase()
+            .replace(Regex("[^a-z0-9\\s]"), " ")
+            .split(Regex("\\s+"))
+            .filter { it.length > 2 }
+            .toSet()
+        if (queryWords.isEmpty()) return emptyList()
+        return all.map { (name, content, _) ->
+            val combinedText = "$name $content".lowercase()
+            val memoryWords = combinedText
+                .replace(Regex("[^a-z0-9\\s]"), " ")
+                .split(Regex("\\s+"))
+                .filter { it.length > 2 }
+                .toSet()
+            val intersection = queryWords.intersect(memoryWords).size
+            val union = queryWords.union(memoryWords).size
+            val score = if (union > 0) intersection.toFloat() / union else 0f
+            Triple(name, content, score)
+        }.filter { it.third > 0 }
+            .sortedByDescending { it.third }
+            .take(limit)
+    }
+
+    fun deleteKnowledge(name: String) {
+        writableDatabase.delete(TABLE_KNOWLEDGE, "$COL_NAME = ?", arrayOf(name))
     }
 
     // === Conversations ===
@@ -139,6 +230,11 @@ class AgentDatabase(context: Context) : SQLiteOpenHelper(context, DB_NAME, null,
             put(COL_VALUE, value)
         }
         writableDatabase.insertWithOnConflict(TABLE_MEMORY, null, values, SQLiteDatabase.CONFLICT_REPLACE)
+    }
+
+    /** v6.0.0: Forget a memory by key */
+    fun forgetMemory(key: String) {
+        writableDatabase.delete(TABLE_MEMORY, "$COL_KEY = ?", arrayOf(key))
     }
 
     fun recall(key: String): String? {

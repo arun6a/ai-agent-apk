@@ -53,7 +53,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val REQUEST_RECORD_AUDIO = 100
         private const val MAX_ITERATIONS = 50           // more headroom for complex tasks
-        private const val MAX_REPEATED_TOOLS = 3  // batch independent tools to save API calls        // if same tool+args called N times, stop (infinite loop guard)
+        private const val MAX_REPEATED_TOOLS = 5  // v6.0.0: increased from 3 → 5 (legitimate multi-clicks)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -96,6 +96,12 @@ class MainActivity : AppCompatActivity() {
         setupVoiceCallbacks()
         setupUIListeners()
         checkAudioPermission()
+
+        // v6.0.0: Bottom navigation setup
+        setupBottomNavigation()
+
+        // v6.0.0: File attachment button
+        setupFileAttachment()
 
         // Start rule engine directly from Activity (not depending on AgentService)
         startRuleEngine()
@@ -423,6 +429,117 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // ==================== v6.0.0: BOTTOM NAVIGATION ====================
+
+    private fun setupBottomNavigation() {
+        binding.bottomNav.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_chat -> {
+                    binding.chatContainer.visibility = View.VISIBLE
+                    binding.fragmentContainer.visibility = View.GONE
+                    true
+                }
+                R.id.nav_agent -> {
+                    binding.chatContainer.visibility = View.GONE
+                    binding.fragmentContainer.visibility = View.VISIBLE
+                    supportFragmentManager.beginTransaction()
+                        .replace(R.id.fragmentContainer, com.ai.agent.ui.AgentFragment())
+                        .commit()
+                    true
+                }
+                R.id.nav_rules -> {
+                    binding.chatContainer.visibility = View.GONE
+                    binding.fragmentContainer.visibility = View.VISIBLE
+                    supportFragmentManager.beginTransaction()
+                        .replace(R.id.fragmentContainer, com.ai.agent.ui.RulesFragment())
+                        .commit()
+                    true
+                }
+                R.id.nav_memory -> {
+                    binding.chatContainer.visibility = View.GONE
+                    binding.fragmentContainer.visibility = View.VISIBLE
+                    supportFragmentManager.beginTransaction()
+                        .replace(R.id.fragmentContainer, com.ai.agent.ui.MemoryFragment())
+                        .commit()
+                    true
+                }
+                R.id.nav_settings -> {
+                    binding.chatContainer.visibility = View.GONE
+                    binding.fragmentContainer.visibility = View.VISIBLE
+                    supportFragmentManager.beginTransaction()
+                        .replace(R.id.fragmentContainer, com.ai.agent.ui.SettingsFragment())
+                        .commit()
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
+    /** Switch to Settings tab (called from AgentFragment) */
+    fun switchToSettings() {
+        binding.bottomNav.selectedItemId = R.id.nav_settings
+    }
+
+    // ==================== v6.0.0: FILE ATTACHMENT ====================
+
+    private val ATTACH_FILE_REQUEST = 200
+
+    private fun setupFileAttachment() {
+        binding.attachBtn.setOnClickListener {
+            val intent = android.content.Intent(android.content.Intent.ACTION_GET_CONTENT).apply {
+                type = "*/*"
+                addCategory(android.content.Intent.CATEGORY_OPENABLE)
+                putExtra(android.content.Intent.EXTRA_ALLOW_MULTIPLE, true)
+            }
+            try {
+                @Suppress("DEPRECATION")
+                startActivityForResult(intent, ATTACH_FILE_REQUEST)
+            } catch (e: Exception) {
+                android.widget.Toast.makeText(this, "File picker error: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == ATTACH_FILE_REQUEST && resultCode == android.app.Activity.RESULT_OK) {
+            val attachmentsDir = java.io.File("/storage/emulated/0/Documents/ai-workspace/attachments")
+            if (!attachmentsDir.exists()) attachmentsDir.mkdirs()
+
+            val uris = mutableListOf<android.net.Uri>()
+            if (data?.clipData != null) {
+                val clipData = data.clipData!!
+                for (i in 0 until clipData.itemCount) {
+                    uris.add(clipData.getItemAt(i).uri)
+                }
+            } else if (data?.data != null) {
+                uris.add(data.data!!)
+            }
+
+            for (uri in uris) {
+                try {
+                    val timestamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.getDefault()).format(java.util.Date())
+                    val ext = contentResolver.getType(uri)?.substringAfter("/") ?: "bin"
+                    val destFile = java.io.File(attachmentsDir, "${timestamp}_${uris.indexOf(uri)}.$ext")
+                    contentResolver.openInputStream(uri)?.use { input ->
+                        destFile.outputStream().use { output -> input.copyTo(output) }
+                    }
+                    android.util.Log.i("MainActivity", "Attached file: ${destFile.name} (${destFile.length()} bytes)")
+                } catch (e: Exception) {
+                    android.util.Log.e("MainActivity", "Failed to attach file", e)
+                }
+            }
+
+            if (uris.isNotEmpty()) {
+                android.widget.Toast.makeText(this, "Attached ${uris.size} file(s). AI can now use listAttachments + readAttachment.", android.widget.Toast.LENGTH_SHORT).show()
+                // Switch to chat tab
+                binding.bottomNav.selectedItemId = R.id.nav_chat
+            }
+        }
+    }
+
     private fun setupUIListeners() {
         binding.langBtn.setOnClickListener {
             currentLang = if (currentLang == "en-IN") "ta-IN" else "en-IN"
@@ -476,38 +593,11 @@ class MainActivity : AppCompatActivity() {
             true
         }
 
-        // Rules button — shows options menu
-        binding.rulesBtn.setOnClickListener {
-            val options = arrayOf("Rules & Scheduled Tasks", "Enable Notification Access", "Clear Chat History", "Settings")
-            AlertDialog.Builder(this)
-                .setTitle("Options")
-                .setItems(options) { _, which ->
-                    when (which) {
-                        0 -> startActivity(Intent(this, com.ai.agent.ui.RulesActivity::class.java))
-                        1 -> startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
-                        2 -> {
-                            AlertDialog.Builder(this)
-                                .setTitle("Clear History")
-                                .setMessage("Delete all chat history?")
-                                .setPositiveButton("Clear") { _, _ ->
-                                    database.clearConversations()
-                                    adapter.clear()
-                                    adapter.addMessage(ChatMessage(text = "History cleared.", isUser = false))
-                                    showToast("History cleared")
-                                }
-                                .setNegativeButton("Cancel", null)
-                                .show()
-                        }
-                        3 -> startActivity(Intent(this, com.ai.agent.ui.SettingsActivity::class.java))
-                    }
-                }
-                .show()
-        }
+        // v6.0.0: Rules button removed — now via bottom nav. Old options menu code removed.
+        // (binding.rulesBtn no longer exists in new layout)
 
-        // Settings button
-        binding.settingsBtn.setOnClickListener {
-            startActivity(Intent(this, com.ai.agent.ui.SettingsActivity::class.java))
-        }
+        // Settings button removed — now via bottom nav
+        // (binding.settingsBtn no longer exists in new layout)
         binding.textInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -622,7 +712,7 @@ class MainActivity : AppCompatActivity() {
 
             // Build conversation with recent history (last 6 messages)
             val conversation = StringBuilder()
-            val history = database.getRecentConversations(4)
+            val history = database.getRecentConversations(2)  // v6.0.0: reduced from 4 → 2 (save tokens)
             if (history.isNotEmpty()) {
                 conversation.append("[Recent conversation history:\n")
                 for ((role, text) in history) {
@@ -719,9 +809,9 @@ class MainActivity : AppCompatActivity() {
                 conversation.append("\nBased on these results, decide the next step. If the task is complete, reply with just the final message and no tool_calls. If a step failed, try a DIFFERENT approach (don't repeat the same action). If you need to verify, call readScreen().")
 
                 // Trim old history to prevent conversation from growing too long
-                if (conversation.length > 8000) {
+                if (conversation.length > 3000) {  // v6.0.0: reduced from 8000 → 3000
                     val originalMsg = userMessage
-                    val recentHistory = conversation.substring(conversation.length - 6000)
+                    val recentHistory = conversation.substring(conversation.length - 2000)  // v6.0.0: keep 2000 (was 6000)
                     conversation.clear()
                     conversation.append(originalMsg)
                     conversation.append("\n\n[Previous steps omitted. Most recent steps:]")

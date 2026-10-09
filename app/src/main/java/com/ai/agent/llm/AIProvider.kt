@@ -68,7 +68,83 @@ object AIProvider {
                 ModelInfo("llama-3.1-8b-instant", "Llama 3.1 8B Instant", "Very fast, good for chat. Free tier."),
                 ModelInfo("llama-3.2-11b-vision-preview", "Llama 3.2 11B Vision (Vision!)", "VISION-capable — can analyze screenshots. Free."),
                 ModelInfo("llama-3.2-90b-vision-preview", "Llama 3.2 90B Vision", "Most capable Groq vision model. Free."),
-                ModelInfo("mixtral-8x7b-32768", "Mixtral 8x7B", "MoE model, fast. 32k context. Free.")
+                ModelInfo("mixtral-8x7b-32768", "Mixtral 8x7B", "MoE model, fast. 32k context. Free."),
+                ModelInfo("qwen-2.5-72b", "Qwen 2.5 72B", "Great for coding + multilingual. Free."),
+                ModelInfo("deepseek-r1-distill-llama-70b", "DeepSeek R1 (Reasoning)", "Reasoning model. Free.")
+            )
+        ),
+        ProviderInfo(
+            id = "openai",
+            name = "OpenAI (Paid)",
+            description = "GPT-4o, GPT-4o-mini, o1 models. Paid. Get key at platform.openai.com/api-keys",
+            defaultEndpoint = "https://api.openai.com/v1/chat/completions",
+            needsApiKey = true,
+            models = listOf(
+                ModelInfo("gpt-4o", "GPT-4o", "Most capable OpenAI model. Paid."),
+                ModelInfo("gpt-4o-mini", "GPT-4o mini (Cheap)", "Fast, cheap, capable. Paid."),
+                ModelInfo("o1-mini", "o1 mini (Reasoning)", "Reasoning model. Paid."),
+                ModelInfo("gpt-4-vision-preview", "GPT-4 Vision", "Vision-capable. Paid.")
+            )
+        ),
+        ProviderInfo(
+            id = "anthropic",
+            name = "Anthropic (Paid)",
+            description = "Claude models — excellent quality. Paid. Get key at console.anthropic.com",
+            defaultEndpoint = "https://api.anthropic.com/v1/messages",
+            needsApiKey = true,
+            models = listOf(
+                ModelInfo("claude-3-5-sonnet-20241022", "Claude 3.5 Sonnet (Best)", "Most capable Claude. Excellent quality. Paid."),
+                ModelInfo("claude-3-5-haiku-20241022", "Claude 3.5 Haiku (Fast)", "Fast, cheap. Paid."),
+                ModelInfo("claude-3-opus-20240229", "Claude 3 Opus", "Legacy flagship. Paid.")
+            )
+        ),
+        ProviderInfo(
+            id = "cerebras",
+            name = "Cerebras (Ultra Fast)",
+            description = "Ultra-fast inference on CS-3 wafer-scale hardware. Free tier. Get key at cerebras.ai",
+            defaultEndpoint = "https://api.cerebras.ai/v1/chat/completions",
+            needsApiKey = true,
+            models = listOf(
+                ModelInfo("llama-3.3-70b", "Llama 3.3 70B (Fast)", "70B on Cerebras — fastest 70B. Free."),
+                ModelInfo("llama-3.1-8b", "Llama 3.1 8B (Ultra Fast)", "Extremely fast. Free.")
+            )
+        ),
+        ProviderInfo(
+            id = "mistral",
+            name = "Mistral AI",
+            description = "Mistral models — native function calling. Free tier (La Plateforme). Get key at console.mistral.ai",
+            defaultEndpoint = "https://api.mistral.ai/v1/chat/completions",
+            needsApiKey = true,
+            models = listOf(
+                ModelInfo("mistral-large-latest", "Mistral Large (Best)", "Most capable Mistral. Free tier."),
+                ModelInfo("mistral-small-latest", "Mistral Small (Fast)", "Fast, cheap. Free tier."),
+                ModelInfo("codestral-latest", "Codestral", "Code generation specialist. Free."),
+                ModelInfo("pixtral-large-latest", "Pixtral Large (Vision!)", "Vision-capable. Free tier.")
+            )
+        ),
+        ProviderInfo(
+            id = "deepinfra",
+            name = "DeepInfra (Cheap)",
+            description = "Many open-source models, cheap. Free credit on signup. Get key at deepinfra.com",
+            defaultEndpoint = "https://api.deepinfra.com/v1/openai/chat/completions",
+            needsApiKey = true,
+            models = listOf(
+                ModelInfo("meta-llama/Llama-3.3-70B-Instruct", "Llama 3.3 70B", "70B model. Cheap."),
+                ModelInfo("meta-llama/Meta-Llama-3.1-405B-Instruct", "Llama 3.1 405B", "Most capable. Cheap."),
+                ModelInfo("Qwen/Qwen2.5-72B-Instruct", "Qwen 2.5 72B", "Great for coding. Cheap."),
+                ModelInfo("deepseek-ai/DeepSeek-R1", "DeepSeek R1 (Reasoning)", "Reasoning model. Cheap.")
+            )
+        ),
+        ProviderInfo(
+            id = "fireworks",
+            name = "Fireworks AI",
+            description = "Fast inference, many models. Free trial. Get key at fireworks.ai",
+            defaultEndpoint = "https://api.fireworks.ai/inference/v1/chat/completions",
+            needsApiKey = true,
+            models = listOf(
+                ModelInfo("accounts/fireworks/models/llama-v3p3-70b-instruct", "Llama 3.3 70B", "70B on Fireworks. Free trial."),
+                ModelInfo("accounts/fireworks/models/qwen2p5-72b-instruct", "Qwen 2.5 72B", "Coding + multilingual. Free trial."),
+                ModelInfo("accounts/fireworks/models/deepseek-r1", "DeepSeek R1 (Reasoning)", "Reasoning. Free trial.")
             )
         ),
         ProviderInfo(

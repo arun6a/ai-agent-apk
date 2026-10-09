@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_chat"
+        android:icon="@drawable/ic_chat"
+        android:title="Chat" />
+    <item
+        android:id="@+id/nav_agent"
+        android:icon="@drawable/ic_agent"
+        android:title="Agent" />
+    <item
+        android:id="@+id/nav_rules"
+        android:icon="@drawable/ic_rule"
+        android:title="Rules" />
+    <item
+        android:id="@+id/nav_memory"
+        android:icon="@drawable/ic_memory"
+        android:title="Memory" />
+    <item
+        android:id="@+id/nav_settings"
+        android:icon="@drawable/ic_settings"
+        android:title="Settings" />
+</menu>

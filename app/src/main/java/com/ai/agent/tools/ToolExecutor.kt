@@ -50,6 +50,7 @@ class ToolExecutor(private val context: Context) {
             "toggleFlashlight", "toggleWifi",
             // Memory
             "remember", "recall", "recallAll", "recallSimilar", "searchMemory",
+            "saveToKnowledge", "recallKnowledge", "listKnowledge",
             "getClipboard", "setClipboard",
             // Location
             "getCurrentLocation", "openMaps",
@@ -62,6 +63,7 @@ class ToolExecutor(private val context: Context) {
             "openDialer", "makePhoneCall", "composeEmail",
             // Files
             "listFiles", "readFile", "writeFile", "copyFile", "moveFile", "deleteFile", "createDirectory",
+            "listAttachments", "readAttachment", "sendAttachmentTo",
             // Activity shortcuts
             "openActivity", "openDeepLink", "openAppWithData", "searchInApp",
             "listAppActivities", "openWhatsAppChat", "openYouTubeVideo", "openMapsLocation",
@@ -127,6 +129,8 @@ class ToolExecutor(private val context: Context) {
             "wait", "waitAndContinue", "localLLM",
             "executeSkill", "listSkills",
             "recallSimilar", "searchMemory",
+            "saveToKnowledge", "recallKnowledge", "listKnowledge",
+            "listAttachments", "readAttachment", "sendAttachmentTo",
             "replyToNotification",
             "openActivity", "openDeepLink", "openAppWithData", "searchInApp",
             "listAppActivities", "openWhatsAppChat", "openYouTubeVideo", "openMapsLocation",
@@ -1377,6 +1381,115 @@ class ToolExecutor(private val context: Context) {
                         sb.append("- $key: $value\n")
                     }
                     ToolResult(true, sb.toString())
+                }
+            }
+            // ==================== KNOWLEDGE (v6.0.0) ====================
+            "saveToKnowledge" -> {
+                val name = call.args["name"] as? String ?: return ToolResult(false, "missing name")
+                val content = call.args["content"] as? String ?: return ToolResult(false, "missing content")
+                val source = call.args["source"] as? String ?: "manual"
+                database.saveKnowledge(name, content, source)
+                ToolResult(true, "Saved knowledge: $name (${content.length} chars, source: $source)")
+            }
+            "recallKnowledge" -> {
+                val query = call.args["query"] as? String ?: return ToolResult(false, "missing query")
+                val results = database.recallKnowledge(query)
+                if (results.isEmpty()) {
+                    ToolResult(true, "No knowledge found for: $query")
+                } else {
+                    val sb = StringBuilder("Knowledge (top ${results.size}):\n")
+                    for ((name, content, score) in results) {
+                        sb.append("- $name (similarity: ${"%.0f".format(score * 100)}%): ${content.take(200)}...\n")
+                    }
+                    ToolResult(true, sb.toString())
+                }
+            }
+            "listKnowledge" -> {
+                val all = database.getAllKnowledge()
+                if (all.isEmpty()) {
+                    ToolResult(true, "No knowledge stored yet.")
+                } else {
+                    val sb = StringBuilder("Knowledge (${all.size}):\n")
+                    for ((name, content, source) in all) {
+                        sb.append("- $name (${content.length} chars, source: $source)\n")
+                    }
+                    ToolResult(true, sb.toString())
+                }
+            }
+            // ==================== FILE ATTACHMENTS (v6.0.0) ====================
+            "listAttachments" -> {
+                val dir = java.io.File("/storage/emulated/0/Documents/ai-workspace/attachments")
+                if (!dir.exists()) {
+                    ToolResult(true, "No attachments directory. Files attached to chat messages will appear here.")
+                } else {
+                    val files = dir.listFiles()?.filter { it.isFile } ?: emptyList()
+                    if (files.isEmpty()) {
+                        ToolResult(true, "No attachments found.")
+                    } else {
+                        val sb = StringBuilder("Attachments (${files.size}):\n")
+                        for (file in files.take(20)) {
+                            val sizeKb = file.length() / 1024
+                            sb.append("- ${file.name} (${sizeKb}KB)\n")
+                        }
+                        ToolResult(true, sb.toString())
+                    }
+                }
+            }
+            "readAttachment" -> {
+                val filename = call.args["filename"] as? String ?: return ToolResult(false, "missing filename")
+                val dir = java.io.File("/storage/emulated/0/Documents/ai-workspace/attachments")
+                val file = java.io.File(dir, filename)
+                if (!file.exists()) {
+                    // Try exact path
+                    val directFile = java.io.File(filename)
+                    if (directFile.exists()) {
+                        val content = directFile.readText()
+                        val truncated = if (content.length > 3000) content.take(3000) + "\n[...truncated]" else content
+                        ToolResult(true, "File: $filename\n\nContent:\n$truncated")
+                    } else {
+                        ToolResult(false, "File not found: $filename")
+                    }
+                } else {
+                    val ext = file.extension.lowercase()
+                    when (ext) {
+                        "txt", "md", "json", "csv", "xml", "html", "log" -> {
+                            val content = file.readText()
+                            val truncated = if (content.length > 3000) content.take(3000) + "\n[...truncated]" else content
+                            ToolResult(true, "File: $filename (${file.length()} bytes)\n\nContent:\n$truncated")
+                        }
+                        "jpg", "jpeg", "png", "webp", "bmp" -> {
+                            ToolResult(true, "Image file: $filename (${file.length() / 1024}KB). Use analyzeScreen or VLM to describe the image content.")
+                        }
+                        "pdf" -> {
+                            ToolResult(true, "PDF file: $filename (${file.length() / 1024}KB). PDF text extraction not implemented — use the file path to share or upload.")
+                        }
+                        else -> {
+                            ToolResult(true, "File: $filename (${file.length()} bytes, type: $ext). Binary file — use shareFile to send to another app.")
+                        }
+                    }
+                }
+            }
+            "sendAttachmentTo" -> {
+                val filename = call.args["filename"] as? String ?: return ToolResult(false, "missing filename")
+                val appPackage = call.args["package"] as? String ?: return ToolResult(false, "missing package")
+                val dir = java.io.File("/storage/emulated/0/Documents/ai-workspace/attachments")
+                val file = java.io.File(dir, filename).let { if (it.exists()) it else java.io.File(filename) }
+                if (!file.exists()) return ToolResult(false, "File not found: $filename")
+                try {
+                    val uri = androidx.core.content.FileProvider.getUriForFile(
+                        context, "${context.packageName}.fileprovider", file
+                    )
+                    val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                        type = context.contentResolver.getType(uri) ?: "*/*"
+                        putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                        setPackage(appPackage)
+                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(shareIntent)
+                    ToolResult(true, "Sent $filename to $appPackage")
+                } catch (e: Exception) {
+                    ToolResult(false, "Failed to send: ${e.message}")
                 }
             }
             // ==================== SKILLS ====================

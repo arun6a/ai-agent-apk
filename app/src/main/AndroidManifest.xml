@@ -82,12 +82,6 @@
             android:label="Rules"
             android:parentActivityName=".MainActivity" />
 
-        <!-- Model downloader activity -->
-        <activity
-            android:name=".ui.ModelDownloaderActivity"
-            android:exported="false"
-            android:label="Local LLM Models"
-            android:parentActivityName=".MainActivity" />
         <!-- Settings activity -->
         <activity
             android:name=".ui.SettingsActivity"

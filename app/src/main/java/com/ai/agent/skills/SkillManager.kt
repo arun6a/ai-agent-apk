@@ -95,6 +95,9 @@ class SkillManager(private val context: Context) {
         return null
     }
 
+    /** v6.0.0: Get count of loaded skills — for AgentFragment UI */
+    fun getSkillCount(): Int = skills.size
+
     fun generatePromptSection(): String {
         if (skills.isEmpty()) return ""
         val sb = StringBuilder("\n## Available Skills\n")

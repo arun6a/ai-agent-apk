@@ -89,9 +89,14 @@ class LLMClient(private val context: Context) {
                         requestBuilder.header("HTTP-Referer", "https://github.com/arun6a/ai-agent-apk")
                         requestBuilder.header("X-Title", "AI Agent Phone")
                     }
-                    "groq", "together" -> {
-                        // Groq + Together use OpenAI-compatible auth (Bearer token, no extra headers)
+                    "groq", "together", "openai", "cerebras", "mistral",
+                    "deepinfra", "fireworks", "anthropic" -> {
+                        // All OpenAI-compatible — Bearer token
                         requestBuilder.header("Authorization", "Bearer $apiKey")
+                        // Anthropic also needs anthropic-version header
+                        if (provider.id == "anthropic") {
+                            requestBuilder.header("anthropic-version", "2023-06-01")
+                        }
                     }
                     "gemini" -> {
                         // Gemini uses query param, not header — handled in endpoint
@@ -175,7 +180,7 @@ class LLMClient(private val context: Context) {
             // For providers that support native function calling, use it.
             // This is MUCH more reliable than asking the LLM to write JSON in the reply.
             // The LLM returns tool_calls as a structured field, not as text.
-            if (providerId in setOf("groq", "openrouter", "together", "custom")) {
+            if (providerId in setOf("groq", "openrouter", "together", "custom", "openai", "cerebras", "mistral", "deepinfra", "fireworks")) {
                 put("tools", buildToolsArray())
                 put("tool_choice", "auto")
                 // Some providers (Groq, OpenRouter) support response_format for stricter output
