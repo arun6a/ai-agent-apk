@@ -28,17 +28,17 @@ Copy the TOKEN and BASE_URL from the output.
 - If poller dies, just re-run the same command
 - The sandbox URL looks like: https://preview-chat-XXXX.space-z.ai
 
-## For this current sandbox (regenerated 2026-10-09)
-  TOKEN=2c812f0dc8910490ec07f9c6a3ef6ee1c5551d1947f0fd6d
+## For this current sandbox (regenerated 2026-10-09, v6.0.1)
+  TOKEN=8d55328685adc0bb2d9a16fcfb4fe41003c7538da21e6577
   BASE_URL=https://preview-chat-1855dd56-e3a8-4ac4-a21c-824fbab8e552.space-z.ai
 
   # AndroidIDE-Rv2 (use this channel for APK installs):
-  TOKEN=2c812f0dc8910490ec07f9c6a3ef6ee1c5551d1947f0fd6d \
+  TOKEN=8d55328685adc0bb2d9a16fcfb4fe41003c7538da21e6577 \
   BASE_URL=https://preview-chat-1855dd56-e3a8-4ac4-a21c-824fbab8e552.space-z.ai \
   CHANNEL=ide node poll.cjs
 
   # Termux (for stability — survives backgrounding):
   termux-wake-lock
-  TOKEN=2c812f0dc8910490ec07f9c6a3ef6ee1c5551d1947f0fd6d \
+  TOKEN=8d55328685adc0bb2d9a16fcfb4fe41003c7538da21e6577 \
   BASE_URL=https://preview-chat-1855dd56-e3a8-4ac4-a21c-824fbab8e552.space-z.ai \
   CHANNEL=default node poll.cjs

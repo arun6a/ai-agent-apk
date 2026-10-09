@@ -256,15 +256,15 @@ class AgentAccessibilityService : AccessibilityService() {
 
     fun captureScreen(callback: (String?) -> Unit) {
         try {
-            // Use fully qualified Android class to avoid Kotlin resolution issues
+            // v6.0.2: Reflection (to avoid API 30 compile issues) + CRITICAL FIX:
+            // Copy hardware bitmap to software bitmap (ARGB_8888) before JPEG compression.
+            // The old code tried to compress a hardware bitmap directly → failed silently.
             val asClass = android.accessibilityservice.AccessibilityService::class.java
-            val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
-            
-            // Create the callback using the fully qualified nested class
+            val executor: java.util.concurrent.Executor = java.util.concurrent.Executors.newSingleThreadExecutor()
+
             val cbClass = android.accessibilityservice.AccessibilityService.TakeScreenshotCallback::class.java
             val cbMethod = asClass.getMethod("takeScreenshot", java.util.concurrent.Executor::class.java, cbClass)
-            
-            // Create callback proxy via dynamic proxy
+
             val callbackObj = java.lang.reflect.Proxy.newProxyInstance(
                 cbClass.classLoader,
                 arrayOf(cbClass),
@@ -274,25 +274,48 @@ class AgentAccessibilityService : AccessibilityService() {
                             try {
                                 val result = args[0] as android.accessibilityservice.AccessibilityService.ScreenshotResult
                                 Log.i(TAG, "Screenshot received")
-                                val bitmap = android.graphics.Bitmap.wrapHardwareBuffer(result.hardwareBuffer, result.colorSpace)
-                                if (bitmap == null) {
+                                val hardwareBuffer = result.hardwareBuffer
+                                val colorSpace = result.colorSpace
+
+                                // Step 1: Wrap hardware buffer → hardware bitmap
+                                val hardwareBitmap = android.graphics.Bitmap.wrapHardwareBuffer(hardwareBuffer, colorSpace)
+                                if (hardwareBitmap == null) {
                                     Log.e(TAG, "wrapHardwareBuffer returned null")
-                                    result.hardwareBuffer.close()
+                                    hardwareBuffer.close()
                                     callback(null)
                                     return@InvocationHandler null
                                 }
-                                Log.i(TAG, "Bitmap: ${bitmap.width}x${bitmap.height}")
-                                
-                                val stream = java.io.ByteArrayOutputStream()
-                                val w = bitmap.width; val h = bitmap.height
+                                Log.i(TAG, "Hardware bitmap: ${hardwareBitmap.width}x${hardwareBitmap.height} config=${hardwareBitmap.config}")
+
+                                // Step 2: CRITICAL FIX — copy to software bitmap (ARGB_8888)
+                                // Hardware bitmaps CANNOT be compressed to JPEG!
+                                val softwareBitmap = hardwareBitmap.copy(android.graphics.Bitmap.Config.ARGB_8888, false)
+                                hardwareBitmap.recycle()
+                                hardwareBuffer.close()
+
+                                if (softwareBitmap == null) {
+                                    Log.e(TAG, "copy to ARGB_8888 failed — bitmap config=${hardwareBitmap.config}")
+                                    callback(null)
+                                    return@InvocationHandler null
+                                }
+                                Log.i(TAG, "Software bitmap: ${softwareBitmap.width}x${softwareBitmap.height}")
+
+                                // Step 3: Scale down + compress to JPEG
+                                val w = softwareBitmap.width
+                                val h = softwareBitmap.height
                                 val scaled = if (w > 480) {
                                     val r = 480f / w
-                                    android.graphics.Bitmap.createScaledBitmap(bitmap, 480, (h * r).toInt(), true)
-                                } else bitmap
+                                    android.graphics.Bitmap.createScaledBitmap(softwareBitmap, 480, (h * r).toInt(), true)
+                                } else softwareBitmap
+
+                                val stream = java.io.ByteArrayOutputStream()
                                 scaled.compress(android.graphics.Bitmap.CompressFormat.JPEG, 70, stream)
                                 val b64 = android.util.Base64.encodeToString(stream.toByteArray(), android.util.Base64.NO_WRAP)
-                                Log.i(TAG, "Screenshot done: ${stream.toByteArray().size} bytes")
-                                result.hardwareBuffer.close()
+                                Log.i(TAG, "Screenshot done: ${stream.toByteArray().size} bytes, base64: ${b64.length} chars")
+
+                                if (scaled !== softwareBitmap) scaled.recycle()
+                                softwareBitmap.recycle()
+
                                 callback(b64)
                             } catch (e: Exception) {
                                 Log.e(TAG, "Screenshot processing failed", e)
@@ -308,7 +331,7 @@ class AgentAccessibilityService : AccessibilityService() {
                     null
                 }
             )
-            
+
             cbMethod.invoke(this, executor, callbackObj)
         } catch (e: Exception) {
             Log.e(TAG, "takeScreenshot error", e)
