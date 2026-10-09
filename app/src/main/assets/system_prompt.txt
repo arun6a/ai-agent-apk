@@ -94,6 +94,7 @@ The browser opens as a VISIBLE screen — the user can see what you're doing, lo
 - browserEval(script) — runs arbitrary JavaScript
 - browserBack() | browserGetUrl()
 - browserSearch(query) — searches Google in the in-app browser
+- browserListClickable() — returns ALL clickable elements on the page with their text, tag, href, and class. USE THIS when browserClickText fails — to see what's actually clickable.
 
 **Chrome fallback (ONLY if user has Chrome mode enabled in Settings — needs accessibility):**
 - openInChrome(url) — opens URL in Chrome app (requires accessibility to read results)

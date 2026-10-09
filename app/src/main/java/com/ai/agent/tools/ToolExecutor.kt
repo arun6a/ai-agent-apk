@@ -41,7 +41,7 @@ class ToolExecutor(private val context: Context) {
             "browserGetForms", "browserFillForm", "browserClickElement", "browserClickText",
             "browserGetText", "browserWaitForElement", "browserScreenshot", "browserScrollDown",
             "browserEval", "browserBack", "browserGetUrl", "browserSearch", "browserFill",
-            "browserClick", "openInChrome", "searchInChrome",
+            "browserClick", "browserListClickable", "openInChrome", "searchInChrome",
             // Web
             "webSearch", "makeHttpRequest", "downloadFile", "openUrl",
             // Device
@@ -107,7 +107,7 @@ class ToolExecutor(private val context: Context) {
             "browserGetForms", "browserFillForm", "browserClickElement", "browserClickText",
             "browserGetText", "browserWaitForElement", "browserScreenshot", "browserScrollDown",
             "browserEval", "browserBack", "browserGetUrl", "browserSearch", "browserFill",
-            "browserClick",
+            "browserClick", "browserListClickable",
             "openInChrome", "searchInChrome",
             "webSearch", "makeHttpRequest", "downloadFile", "openUrl",
             "getBatteryLevel", "getCurrentTime", "getBluetoothState", "getNetworkInfo",
@@ -1152,7 +1152,16 @@ class ToolExecutor(private val context: Context) {
             "browserClickText" -> {
                 val text = call.args["text"] as? String ?: return ToolResult(false, "missing text")
                 val clicked = BrowserController.clickByText(context, text)
-                ToolResult(clicked, if (clicked) "Clicked: $text" else "Text not found: $text")
+                if (clicked) {
+                    ToolResult(true, "Clicked: $text. Call browserReadStructured() or browserGetUrl() to see what happened next.")
+                } else {
+                    // Give the AI actionable next steps instead of just "not found"
+                    ToolResult(false, "Text not found: '$text'. The text might be: (a) inside an image/iframe, (b) rendered differently, (c) page not fully loaded. Try: 1) browserWaitForElement('button', 3000) then retry, 2) browserReadStructured() to see ALL clickable elements + their text, 3) browserClickElement with a CSS selector like 'a[href*=\"product\"]', 4) browserEval('document.querySelectorAll(\"button, a\")') to list all buttons/links.")
+                }
+            }
+            "browserListClickable" -> {
+                val elements = BrowserController.listClickableElements(context)
+                ToolResult(true, "Clickable elements on page:\n$elements")
             }
             "browserGetText" -> {
                 val selector = call.args["selector"] as? String ?: return ToolResult(false, "missing selector (CSS)")

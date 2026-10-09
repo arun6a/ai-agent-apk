@@ -431,26 +431,95 @@ object BrowserController {
         val script = """
             (function() {
                 var target = '$escapedText'.toLowerCase();
-                var els = document.querySelectorAll('button, a, [role="button"], input[type="submit"], input[type="button"], [onclick]');
+                var clicked = false;
+
+                // Pass 1: Check buttons, links, and clickable elements with multiple text sources
+                var els = document.querySelectorAll('button, a, [role="button"], input[type="submit"], input[type="button"], [onclick], .btn, .button, [class*="btn"], [class*="button"]');
                 for (var i = 0; i < els.length; i++) {
-                    var elText = (els[i].innerText || els[i].value || els[i].getAttribute('aria-label') || '').toLowerCase();
+                    var elText = (
+                        els[i].innerText ||
+                        els[i].textContent ||
+                        els[i].value ||
+                        els[i].getAttribute('aria-label') ||
+                        els[i].getAttribute('title') ||
+                        els[i].getAttribute('alt') ||
+                        els[i].getAttribute('data-text') ||
+                        els[i].getAttribute('data-label') ||
+                        ''
+                    ).toLowerCase();
                     if (elText.includes(target)) {
                         els[i].click();
-                        return true;
+                        clicked = true;
+                        break;
                     }
                 }
-                // Fallback: any element with matching text
-                var all = document.querySelectorAll('*');
-                for (var i = 0; i < all.length && i < 500; i++) {
-                    if (all[i].children.length === 0) {
-                        var t = (all[i].innerText || '').toLowerCase();
-                        if (t.includes(target)) {
-                            all[i].click();
-                            return true;
+
+                // Pass 2: Check images (alt text)
+                if (!clicked) {
+                    var imgs = document.querySelectorAll('img, input[type="image"]');
+                    for (var i = 0; i < imgs.length; i++) {
+                        var altText = (imgs[i].getAttribute('alt') || imgs[i].getAttribute('title') || '').toLowerCase();
+                        if (altText.includes(target)) {
+                            imgs[i].click();
+                            // Also try clicking parent (image might be inside a link)
+                            var parent = imgs[i].parentElement;
+                            while (parent && parent.tagName !== 'A' && parent.tagName !== 'BUTTON') {
+                                parent = parent.parentElement;
+                            }
+                            if (parent) parent.click();
+                            clicked = true;
+                            break;
                         }
                     }
                 }
-                return false;
+
+                // Pass 3: Any element with matching text (leaf nodes)
+                if (!clicked) {
+                    var all = document.querySelectorAll('*');
+                    for (var i = 0; i < all.length && i < 1000; i++) {
+                        if (all[i].children.length === 0) {
+                            var t = (
+                                all[i].innerText ||
+                                all[i].textContent ||
+                                all[i].getAttribute('alt') ||
+                                ''
+                            ).toLowerCase();
+                            if (t.includes(target)) {
+                                all[i].click();
+                                // Also click parent if child click didn't work
+                                if (all[i].parentElement) {
+                                    all[i].parentElement.click();
+                                }
+                                clicked = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // Pass 4: Try iframes (cross-origin iframes can't be accessed, but same-origin can)
+                if (!clicked) {
+                    var frames = document.querySelectorAll('iframe');
+                    for (var f = 0; f < frames.length; f++) {
+                        try {
+                            var frameDoc = frames[f].contentDocument || frames[f].contentWindow.document;
+                            var frameEls = frameDoc.querySelectorAll('button, a, [role="button"], input[type="submit"]');
+                            for (var i = 0; i < frameEls.length; i++) {
+                                var elText = (frameEls[i].innerText || frameEls[i].textContent || '').toLowerCase();
+                                if (elText.includes(target)) {
+                                    frameEls[i].click();
+                                    clicked = true;
+                                    break;
+                                }
+                            }
+                        } catch(e) {
+                            // Cross-origin iframe — can't access
+                        }
+                        if (clicked) break;
+                    }
+                }
+
+                return clicked;
             })();
         """.trimIndent()
         handler.post {
@@ -460,9 +529,47 @@ object BrowserController {
         }
         return try {
             kotlinx.coroutines.runBlocking {
-                kotlinx.coroutines.withTimeoutOrNull(3000) { deferred.await() } ?: false
+                kotlinx.coroutines.withTimeoutOrNull(5000) { deferred.await() } ?: false
             }
         } catch (e: Exception) { false }
+    }
+
+    /**
+     * List ALL clickable elements on the page with their text, tag, and href.
+     * Used by the AI when browserClickText fails — to see what's actually clickable.
+     */
+    fun listClickableElements(context: Context): String {
+        val wv = getWebView(context); if (false) return "[]"
+        val deferred = CompletableDeferred<String>()
+        val script = """
+            (function() {
+                var results = [];
+                var els = document.querySelectorAll('button, a, [role="button"], input[type="submit"], input[type="button"], [onclick], .btn, .button, [class*="btn"]');
+                for (var i = 0; i < els.length && i < 50; i++) {
+                    var el = els[i];
+                    var text = (el.innerText || el.textContent || el.value || el.getAttribute('aria-label') || el.getAttribute('alt') || el.getAttribute('title') || '').trim();
+                    if (text.length === 0) continue;
+                    results.push({
+                        tag: el.tagName.toLowerCase(),
+                        text: text.substring(0, 100),
+                        href: el.getAttribute('href') || '',
+                        class: (el.className || '').toString().substring(0, 50),
+                        type: el.getAttribute('type') || ''
+                    });
+                }
+                return JSON.stringify(results);
+            })();
+        """.trimIndent()
+        handler.post {
+            wv.evaluateJavascript(script) { result ->
+                deferred.complete(result ?: "[]")
+            }
+        }
+        return try {
+            kotlinx.coroutines.runBlocking {
+                kotlinx.coroutines.withTimeoutOrNull(3000) { deferred.await() } ?: "[]"
+            }
+        } catch (e: Exception) { "[]" }
     }
 
     /**
