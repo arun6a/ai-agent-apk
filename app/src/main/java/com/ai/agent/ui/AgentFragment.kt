@@ -58,8 +58,7 @@ class AgentFragment : Fragment() {
             startActivity(intent)
         }
         view.findViewById<Button>(R.id.btnOpenSettings).setOnClickListener {
-            // Switch to Settings tab
-            (activity as? MainActivity)?.switchToSettings()
+            startActivity(android.content.Intent(requireContext(), SettingsActivity::class.java))
         }
         view.findViewById<Button>(R.id.btnCheckAccessibility).setOnClickListener {
             val enabled = com.ai.agent.accessibility.AgentAccessibilityService.isEnabled(requireContext())
