@@ -39,6 +39,11 @@ class ToolExecutor(private val context: Context) {
     }
 
     private suspend fun executeTool(call: LLMClient.ToolCall): ToolResult {
+        // Normalize positional args (0, 1, 2...) to named args for tools that the LLM
+        // wrote as plain text (e.g., "tap(970, 180)" → args={"0":970, "1":180}).
+        // This converts them to the expected named format ({"x":970, "y":180}).
+        val call = normalizePositionalArgs(call)
+
         // Tools that DON'T need accessibility — browser, web, device, memory, rules, etc.
         // These work even without accessibility enabled.
         val noAccessibilityNeeded = call.name in setOf(
@@ -1971,6 +1976,65 @@ class ToolExecutor(private val context: Context) {
         }
         Log.w(TAG, "Accessibility service enabled but never bound after 5s — Android may be slow")
         return AgentAccessibilityService.getInstance()  // last try
+    }
+
+    /**
+     * Normalize positional args (0, 1, 2...) to named args.
+     *
+     * When the LLM writes tool calls as plain text (e.g., "tap(970, 180)"), the text
+     * parser produces args like {"0": 970, "1": 180}. This converts them to the named
+     * format each tool actually expects ({"x": 970, "y": 180}).
+     *
+     * If the LLM already used named args (proper JSON), this is a no-op.
+     */
+    private fun normalizePositionalArgs(call: LLMClient.ToolCall): LLMClient.ToolCall {
+        // Only normalize if there are positional args (numeric string keys)
+        val hasPositional = call.args.keys.any { it.toIntOrNull() != null }
+        if (!hasPositional) return call
+
+        // Map: tool name → list of expected arg names in positional order
+        val argOrder = when (call.name) {
+            "tap" -> listOf("x", "y")
+            "swipe" -> listOf("x1", "y1", "x2", "y2")
+            "type", "clickByText" -> listOf("text")
+            "launchApp" -> listOf("package")
+            "searchInApp" -> listOf("package", "query")
+            "webSearch", "openGoogleSearch" -> listOf("query")
+            "browserOpen", "openUrl" -> listOf("url")
+            "browserClickText", "browserClickElement", "browserGetText" -> listOf("selector")
+            "browserFillForm" -> listOf("field", "value")
+            "remember" -> listOf("key", "value")
+            "recall", "recallSimilar", "searchMemory" -> listOf("query")
+            "setVolume" -> listOf("level")
+            "setBrightness" -> listOf("level")
+            "sendSMS" -> listOf("number", "message")
+            "callContact" -> listOf("number")
+            "setAlarm" -> listOf("hour", "minute")
+            "setTimer" -> listOf("seconds")
+            "takeScreenshotToGallery", "scrollDown", "scrollUp",
+            "pressBack", "pressHome", "pressEnter", "submitInput",
+            "recallAll", "listInstalledApps" -> emptyList()
+            else -> emptyList()
+        }
+
+        if (argOrder.isEmpty()) return call
+
+        val newArgs = mutableMapOf<String, Any>()
+        // Copy named args first
+        for ((key, value) in call.args) {
+            if (key.toIntOrNull() == null) {
+                newArgs[key] = value
+            }
+        }
+        // Map positional args to named args
+        for ((pos, name) in argOrder.withIndex()) {
+            val posValue = call.args[pos.toString()]
+            if (posValue != null && !newArgs.containsKey(name)) {
+                newArgs[name] = posValue
+            }
+        }
+
+        return LLMClient.ToolCall(call.name, newArgs)
     }
 
     data class ToolResult(

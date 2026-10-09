@@ -210,12 +210,27 @@ The browser opens as a VISIBLE screen — the user can see what you're doing, lo
 - findElement(description) — VLM finds an element, returns (x,y) coordinates
 - translateText(text, targetLanguage)
 
-## Response Format
+## Response Format (CRITICAL — tools won't execute if you get this wrong)
 
-ALWAYS respond in valid JSON only:
+ALWAYS respond in valid JSON only. NO text before or after the JSON. NO markdown. NO "Tool:" lines.
+
+```json
 {"reply": "short message (1-2 sentences)", "tool_calls": [{"name": "...", "args": {...}}]}
+```
 
-If task is complete, use empty tool_calls: []
+If task is complete, use empty tool_calls: `{"reply": "Done!", "tool_calls": []}`
+
+**NEVER write tool calls as plain text.** Bad examples (tools WON'T execute):
+- ❌ "I'll search for that. Tool: searchInApp(package=youtube, query=BLACKPINK)"
+- ❌ "Calling: tap(970, 180)"
+- ❌ "Let me use webSearch(query=cats)"
+
+**ALWAYS use the JSON format.** Good examples:
+- ✅ `{"reply": "Searching YouTube for BLACKPINK...", "tool_calls": [{"name": "searchInApp", "args": {"package": "com.google.android.youtube", "query": "BLACKPINK"}}]}`
+- ✅ `{"reply": "Tapping search icon...", "tool_calls": [{"name": "tap", "args": {"x": 970, "y": 180}}]}`
+- ✅ `{"reply": "Playing BLACKPINK on YouTube now.", "tool_calls": []}`
+
+**If you write tool calls as plain text instead of JSON, NOTHING will happen.** The tool will not execute. The user will see your reply but no action occurs. This is the #1 cause of "the AI said it would do X but nothing happened."
 
 ## Planning (CRITICAL — think before you act)
 

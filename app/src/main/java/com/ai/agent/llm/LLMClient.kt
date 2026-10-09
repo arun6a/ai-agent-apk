@@ -295,12 +295,94 @@ class LLMClient(private val context: Context) {
                     }
                 }
             }
+
+            // FALLBACK: If JSON parsing found no tool_calls, scan the reply text for
+            // tool calls written in plain text format. Some LLMs (especially smaller
+            // models) write tool calls as text instead of JSON, e.g.:
+            //   "Tool: searchInApp(package=com.google.android.youtube, query=BLACKPINK)"
+            //   "Calling: tap(970, 180)"
+            //   "I'll use searchInApp(package=youtube, query=BLACKPINK)"
+            // This extracts them so the agent loop can actually execute them.
+            if (toolCalls.isEmpty()) {
+                val textCalls = extractToolCallsFromText(content)
+                if (textCalls.isNotEmpty()) {
+                    Log.i("LLMClient", "Recovered ${textCalls.size} tool call(s) from plain text: ${textCalls.map { it.name }}")
+                    toolCalls.addAll(textCalls)
+                }
+            }
+
             LLMResponse(reply, toolCalls)
         } catch (e: Exception) {
-            // JSON parsing failed — return the content as-is with no tool calls
-            Log.w("LLMClient", "Failed to parse JSON from response: ${content.take(200)}")
-            LLMResponse(content, emptyList())
+            // JSON parsing failed — try to extract tool calls from plain text
+            val textCalls = extractToolCallsFromText(content)
+            if (textCalls.isNotEmpty()) {
+                Log.i("LLMClient", "JSON parse failed but recovered ${textCalls.size} tool call(s) from text: ${textCalls.map { it.name }}")
+                // Strip the "Tool: ..." text from the reply so the user doesn't see raw tool syntax
+                val cleanReply = content
+                    .replace(Regex("(?i)(tool|calling|action)\\s*:\\s*\\w+\\s*\\([^)]*\\)"), "")
+                    .replace(Regex("\\b\\w+\\([^)]*package=[^)]*\\)"), "")
+                    .trim()
+                LLMResponse(cleanReply.ifEmpty { "Executing..." }, textCalls)
+            } else {
+                Log.w("LLMClient", "Failed to parse JSON from response: ${content.take(200)}")
+                LLMResponse(content, emptyList())
+            }
         }
+    }
+
+    /**
+     * Extract tool calls from plain text when the LLM writes them as text instead of JSON.
+     * Detects patterns like:
+     *   "Tool: searchInApp(package=com.google.android.youtube, query=BLACKPINK)"
+     *   "calling: tap(970, 180)"
+     *   "I'll use type(text=hello)"
+     *
+     * Returns a list of ToolCall objects. Empty list if none found.
+     */
+    private fun extractToolCallsFromText(text: String): List<ToolCall> {
+        val calls = mutableListOf<ToolCall>()
+
+        // Pattern: optional "Tool:" or "Calling:" prefix, then toolName(key=value, key=value, ...)
+        // Also matches: toolName("value", 123, key=value)
+        val pattern = Regex(
+            "(?i)(?:tool|calling|action|use|using)?\\s*[:]?\\s*([a-z][a-z0-9_]*)\\s*\\(\\s*([^)]*)\\)"
+        )
+
+        for (match in pattern.findAll(text)) {
+            val toolName = match.groupValues[1].lowercase()
+            val argsStr = match.groupValues[2].trim()
+
+            // Skip common false positives (English words that look like function calls)
+            if (toolName in setOf("e.g", "example", "see", "note", "if", "when", "for", "step", "the", "this", "that")) {
+                continue
+            }
+
+            // Parse the args string: "package=com.google.android.youtube, query=BLACKPINK"
+            // or: "970, 180" (positional args for tap, swipe, etc.)
+            // or: "text=hello, count=3"
+            val args = mutableMapOf<String, Any>()
+            val parts = argsStr.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            for ((index, part) in parts.withIndex()) {
+                val eqIdx = part.indexOf('=')
+                if (eqIdx > 0) {
+                    val key = part.substring(0, eqIdx).trim().lowercase()
+                    val value = part.substring(eqIdx + 1).trim().trim('"').trim('\'')
+                    args[key] = value
+                } else {
+                    // Positional arg — use generic key based on position
+                    // For tap(x, y): args[0]=x, args[1]=y
+                    val value = part.trim('"').trim('\'')
+                    // Try to convert to number if it looks like one
+                    args[index.toString()] = value.toIntOrNull() ?: value
+                }
+            }
+
+            if (args.isNotEmpty() || toolName in setOf("submitinput", "pressenter", "pressback", "presshome", "readscreen", "readscreens", "recallall")) {
+                calls.add(ToolCall(toolName, args))
+            }
+        }
+
+        return calls
     }
 
     /**
