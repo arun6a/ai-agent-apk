@@ -568,6 +568,21 @@ class MainActivity : AppCompatActivity() {
         updateSendButton()
     }
 
+    // v5.0.8: Helper to remove the "Thinking..." message once the first step appears
+    private fun removeThinkingMessage() {
+        try {
+            // The adapter's last message — if it's "Thinking...", remove it
+            val count = adapter.itemCount
+            if (count > 0) {
+                // We can't easily remove from RecyclerView adapter without a method,
+                // but addMessage for steps will push it down naturally.
+                // The "Thinking..." will scroll up as steps are added below it.
+            }
+        } catch (e: Exception) {
+            Log.w("MainActivity", "removeThinkingMessage failed", e)
+        }
+    }
+
     private fun stopAgent() {
         stopRequested = true
         agentJob?.cancel()
@@ -686,7 +701,17 @@ class MainActivity : AppCompatActivity() {
 
                 // Show iteration progress in the chat
                 val callCount = ApiUsageTracker.getTaskCalls()
-                adapter.updateLastMessage("[$iteration/$MAX_ITERATIONS] [API: $callCount calls] $workLog")
+                // v5.0.8: Remove "Thinking..." placeholder when first step appears
+                if (iteration == 1) {
+                    adapter.removeLastIfEquals("Thinking...")
+                }
+                // v5.0.8: ADD a new message per step (was: updateLastMessage which overwrote the same bubble)
+                // This way the user can see ALL steps, not just the latest one.
+                adapter.addMessage(ChatMessage(
+                    text = "[$iteration/$MAX_ITERATIONS] [API: $callCount calls] $toolSummary",
+                    isUser = false,
+                    status = MessageStatus.THINKING
+                ))
 
                 // Append results to conversation for the next LLM call
                 conversation.append("\n\n[Tool results from step $iteration]:")
@@ -716,7 +741,13 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            adapter.updateLastMessage(finalReply)
+            // v5.0.8: Add final reply as a NEW message (not updateLastMessage)
+            // The step messages above are already separate messages, so the final reply
+            // should also be a separate message — not overwriting the last step.
+            adapter.addMessage(ChatMessage(
+                text = finalReply,
+                isUser = false
+            ))
             database.addConversation("ai", finalReply)  // SAVE AI reply to database
             database.logAction("Processed: $userMessage → $finalReply")  // Log action
             voiceManager.speak(finalReply.take(500), currentLang)

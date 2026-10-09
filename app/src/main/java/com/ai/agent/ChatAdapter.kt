@@ -27,6 +27,17 @@ class ChatAdapter : RecyclerView.Adapter<ChatAdapter.MessageViewHolder>() {
         }
     }
 
+    /**
+     * Remove the last message if it matches the given text.
+     * Used to remove "Thinking..." placeholder when the first step appears.
+     */
+    fun removeLastIfEquals(expectedText: String) {
+        if (messages.isNotEmpty() && messages.last().text == expectedText) {
+            messages.removeAt(messages.lastIndex)
+            notifyItemRemoved(messages.size)
+        }
+    }
+
     fun clear() {
         messages.clear()
         notifyDataSetChanged()

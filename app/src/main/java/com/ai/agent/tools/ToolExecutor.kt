@@ -43,7 +43,7 @@ class ToolExecutor(private val context: Context) {
             "browserEval", "browserBack", "browserGetUrl", "browserSearch", "browserFill",
             "browserClick", "browserListClickable", "openInChrome", "searchInChrome",
             // Web
-            "webSearch", "makeHttpRequest", "downloadFile", "openUrl",
+            "webSearch", "makeHttpRequest", "downloadFile", "openUrl", "fetchPageText",
             // Device
             "getBatteryLevel", "getCurrentTime", "getBluetoothState", "getNetworkInfo",
             "getDeviceInfo", "pingHost", "getVolume", "setVolume", "setBrightness",
@@ -109,7 +109,7 @@ class ToolExecutor(private val context: Context) {
             "browserEval", "browserBack", "browserGetUrl", "browserSearch", "browserFill",
             "browserClick", "browserListClickable",
             "openInChrome", "searchInChrome",
-            "webSearch", "makeHttpRequest", "downloadFile", "openUrl",
+            "webSearch", "makeHttpRequest", "downloadFile", "openUrl", "fetchPageText",
             "getBatteryLevel", "getCurrentTime", "getBluetoothState", "getNetworkInfo",
             "getDeviceInfo", "pingHost", "getVolume", "setVolume", "setBrightness",
             "toggleFlashlight", "toggleWifi",
@@ -672,6 +672,55 @@ class ToolExecutor(private val context: Context) {
                     ToolResult(true, "HTTP ${response.code}:\n$truncated")
                 } catch (e: Exception) {
                     ToolResult(false, "HTTP error: ${e.message}")
+                }
+            }
+            // v5.0.8: Background page reader — fetches URL, strips HTML, returns clean text.
+            // NO browser opens. Use for RESEARCH tasks (reading content) — user stays on chat.
+            // For INTERACTION tasks (clicking, forms, ordering) use browserOpen + browserClickText.
+            "fetchPageText" -> {
+                val url = call.args["url"] as? String ?: return ToolResult(false, "missing url")
+                try {
+                    val client = okhttp3.OkHttpClient.Builder()
+                        .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+                        .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                        .build()
+                    val request = okhttp3.Request.Builder()
+                        .url(url)
+                        .header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36")
+                        .build()
+                    val response = client.newCall(request).execute()
+                    val html = response.body?.string() ?: ""
+                    // Strip HTML → clean text
+                    var text = html
+                        .replace(Regex("(?is)<script[^>]*>.*?</script>"), " ")
+                        .replace(Regex("(?is)<style[^>]*>.*?</style>"), " ")
+                        .replace(Regex("(?is)<nav[^>]*>.*?</nav>"), " ")
+                        .replace(Regex("(?is)<footer[^>]*>.*?</footer>"), " ")
+                        .replace(Regex("(?is)<header[^>]*>.*?</header>"), " ")
+                        .replace(Regex("(?is)<!--.*?-->"), " ")
+                        .replace(Regex("(?i)<br\\s*/?>"), "\n")
+                        .replace(Regex("(?i)</p>"), "\n\n")
+                        .replace(Regex("(?i)</div>"), "\n")
+                        .replace(Regex("(?i)</li>"), "\n")
+                        .replace(Regex("(?i)</h[1-6]>"), "\n\n")
+                        .replace(Regex("<[^>]+>"), " ")
+                        .replace(Regex("&nbsp;"), " ")
+                        .replace(Regex("&amp;"), "&")
+                        .replace(Regex("&lt;"), "<")
+                        .replace(Regex("&gt;"), ">")
+                        .replace(Regex("&quot;"), "\"")
+                        .replace(Regex("&#39;"), "'")
+                        .replace(Regex("&[a-z]+;"), " ")
+                        .replace(Regex("[ \\t]+"), " ")
+                        .replace(Regex("\\n[ \\t]+"), "\n")
+                        .replace(Regex("\\n{3,}"), "\n\n")
+                        .trim()
+                    if (text.length > 3000) text = text.take(3000) + "\n\n[...page truncated]"
+                    val titleMatch = Regex("(?i)<title[^>]*>(.*?)</title>").find(html)
+                    val title = titleMatch?.groupValues?.get(1)?.trim()?.take(200) ?: "(no title)"
+                    ToolResult(true, "Page: $title\nURL: $url\nHTTP ${response.code}\n\nContent:\n$text")
+                } catch (e: Exception) {
+                    ToolResult(false, "Fetch error: ${e.message}")
                 }
             }
             "downloadFile" -> {

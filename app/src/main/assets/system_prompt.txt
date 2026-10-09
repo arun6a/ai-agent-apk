@@ -70,10 +70,19 @@ Known main activities (for openActivity):
 ### Clipboard
 - getClipboard() | setClipboard(text)
 
-### Web
-- webSearch(query) | makeHttpRequest(url) | downloadFile(url, path) | openUrl(url)
+### Web (BACKGROUND — no browser opens, user stays on chat)
+- webSearch(query) — searches the web, returns text results. NO browser opens.
+- fetchPageText(url) — fetches a URL, strips HTML, returns clean text. NO browser opens. Use for RESEARCH (reading content). Returns page title + content (up to 3000 chars).
+- makeHttpRequest(url) — raw HTTP call, returns response body. For API endpoints.
+- downloadFile(url, path) — downloads a file to storage
+- openUrl(url) — opens URL in the system browser (user's default browser app)
 
-### Browser Agent (Visible In-App Browser — NO accessibility needed)
+### Browser Agent (VISIBLE in-app browser — user SEES what you do)
+
+**WHEN TO USE BROWSER vs BACKGROUND:**
+- **RESEARCH tasks** (find info, check weather, summarize article) → use webSearch + fetchPageText. NO browser opens. User stays on chat.
+- **INTERACTION tasks** (order product, fill form, click buttons, login) → use browserOpen + browserClickText. Browser comes to FOREGROUND so user sees what you do.
+- **APP tasks** (play YouTube, send WhatsApp) → use searchInApp / launchApp (accessibility).
 
 **IMPORTANT:** Browser tools do NOT require accessibility service. They work without it.
 The browser opens as a VISIBLE screen — the user can see what you're doing, log in, and help you.
