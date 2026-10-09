@@ -78,7 +78,16 @@ Known main activities (for openActivity):
 **IMPORTANT:** Browser tools do NOT require accessibility service. They work without it.
 The browser opens as a VISIBLE screen — the user can see what you're doing, log in, and help you.
 
-**In-App Browser tools (DEFAULT — use these first, no accessibility needed):**
+**BROWSER MODE** (check Settings → Browser Mode):
+- **in_app** (default): Use browserOpen + browserReadStructured + browserClickText. NO accessibility needed.
+- **chrome**: browserOpen opens Chrome. Then browser tools AUTO-ROUTE to accessibility (readScreen, clickByText, tap). You don't need to change your tool calls — the system handles it. But accessibility MUST be enabled.
+- **auto**: tries in_app first, suggests Chrome for logged-in sites.
+
+**CRITICAL: After browserOpen, ALWAYS read the result to see what happened.** Don't guess what's on the page. The tool result tells you:
+- In-app mode: "Browser opened (visible): <url> — use browserReadStructured/browserClickText"
+- Chrome mode: "Opened in Chrome: <url> + screen content + NOTE: Chrome mode active"
+
+**ALWAYS VERIFY after clicking:** Call browserReadStructured (in-app mode) or readScreen (Chrome mode) after clicking to see what happened next. Don't assume the click worked.
 - browserOpen(url) — opens URL in visible in-app browser (user SEES the page load)
 - browserReadStructured() — returns JSON with title, headings[], links[], buttons[], inputs[], forms[], text (THE KEY TOOL — gives you page structure)
 - browserGetLinks() — lists all visible links with text + URL

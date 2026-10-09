@@ -1058,7 +1058,10 @@ class ToolExecutor(private val context: Context) {
                 ToolResult(true, "Please translate this text to $targetLang:\n$text")
             }
             // === IN-APP BROWSER ===
+            // In Chrome mode, browser tools (except browserOpen) don't work — they operate
+            // on the in-app WebView, not Chrome. Auto-route to accessibility tools instead.
             "browserOpen" -> {
+                val isChromeMode = AIProvider.getBrowserMode(context) == "chrome"
                 val url = call.args["url"] as? String ?: return ToolResult(false, "missing url")
                 val finalUrl = if (!url.startsWith("http")) "https://$url" else url
                 val browserMode = AIProvider.getBrowserMode(context)
@@ -1066,13 +1069,21 @@ class ToolExecutor(private val context: Context) {
                     "chrome" -> {
                         // User chose Chrome mode — open in Chrome (needs accessibility for AI to read results)
                         val opened = BrowserController.openInChrome(context, finalUrl)
-                        ToolResult(opened, if (opened) "Opened in Chrome: $finalUrl — use readScreen() to see page" else "Chrome not available")
+                        Thread.sleep(3000)  // give Chrome time to load
+                        if (opened) {
+                            // Auto-read the screen so the AI can see what's on Chrome
+                            val screenText = try { service?.readScreen() ?: "(readScreen failed)" } catch (e: Exception) { "(readScreen error: ${e.message})" }
+                            val finalScreen = if (screenText.length > 2000) screenText.take(2000) + "\n...[truncated]" else screenText
+                            ToolResult(true, "Opened in Chrome: $finalUrl\n\nScreen content:\n$finalScreen\n\nNOTE: Chrome mode is active. Use accessibility tools (readScreen, tap, clickByText) to interact with Chrome. Do NOT use browserClickText/browserReadStructured — they operate on the in-app WebView, not Chrome.")
+                        } else {
+                            ToolResult(false, "Chrome not available")
+                        }
                     }
                     "auto", "in_app" -> {
                         // Use the visible in-app browser (BrowserActivity)
                         BrowserController.openUrl(context, finalUrl)
                         Thread.sleep(2000)
-                        ToolResult(true, "Browser opened (visible): $finalUrl — user can see what you're doing")
+                        ToolResult(true, "Browser opened (visible in-app): $finalUrl — use browserReadStructured/browserClickText to interact")
                     }
                     else -> {
                         BrowserController.openUrl(context, finalUrl)
@@ -1127,12 +1138,26 @@ class ToolExecutor(private val context: Context) {
             }
             // ==================== HYBRID BROWSER AGENT (v4.0.0) ====================
             "browserReadStructured" -> {
-                val result = BrowserController.readStructured(context)
-                ToolResult(true, "Structured page data:\n$result")
+                val isChromeMode = AIProvider.getBrowserMode(context) == "chrome"
+                if (isChromeMode) {
+                    // Chrome mode — auto-fallback to readScreen (accessibility)
+                    val screenText = try { service?.readScreen() ?: "(readScreen failed — accessibility not enabled)" } catch (e: Exception) { "(error: ${e.message})" }
+                    val finalScreen = if (screenText.length > 2000) screenText.take(2000) + "\n...[truncated]" else screenText
+                    ToolResult(true, "Chrome mode: reading Chrome screen via accessibility:\n$finalScreen")
+                } else {
+                    val result = BrowserController.readStructured(context)
+                    ToolResult(true, "Structured page data:\n$result")
+                }
             }
             "browserGetLinks" -> {
-                val result = BrowserController.getLinks(context)
-                ToolResult(true, "Links on page:\n$result")
+                val isChromeMode = AIProvider.getBrowserMode(context) == "chrome"
+                if (isChromeMode) {
+                    val screenText = try { service?.readScreen() ?: "(readScreen failed)" } catch (e: Exception) { "(error: ${e.message})" }
+                    ToolResult(true, "Chrome mode: reading Chrome screen via accessibility:\n$screenText")
+                } else {
+                    val result = BrowserController.getLinks(context)
+                    ToolResult(true, "Links on page:\n$result")
+                }
             }
             "browserGetForms" -> {
                 val result = BrowserController.getForms(context)
@@ -1151,12 +1176,25 @@ class ToolExecutor(private val context: Context) {
             }
             "browserClickText" -> {
                 val text = call.args["text"] as? String ?: return ToolResult(false, "missing text")
-                val clicked = BrowserController.clickByText(context, text)
-                if (clicked) {
-                    ToolResult(true, "Clicked: $text. Call browserReadStructured() or browserGetUrl() to see what happened next.")
+                val isChromeMode = AIProvider.getBrowserMode(context) == "chrome"
+                if (isChromeMode) {
+                    // Chrome mode — use accessibility clickByText instead
+                    val clicked = service?.clickByText(text) ?: false
+                    if (clicked) {
+                        Thread.sleep(1500)  // let the page transition
+                        val screenText = try { service?.readScreen() ?: "" } catch (e: Exception) { "" }
+                        val finalScreen = if (screenText.length > 1000) screenText.take(1000) + "..." else screenText
+                        ToolResult(true, "Chrome mode: clicked '$text' via accessibility. Screen after click:\n$finalScreen")
+                    } else {
+                        ToolResult(false, "Chrome mode: could not click '$text' via accessibility. Try readScreenStructured to see what's on screen, or tap(x,y) with coordinates.")
+                    }
                 } else {
-                    // Give the AI actionable next steps instead of just "not found"
-                    ToolResult(false, "Text not found: '$text'. The text might be: (a) inside an image/iframe, (b) rendered differently, (c) page not fully loaded. Try: 1) browserWaitForElement('button', 3000) then retry, 2) browserReadStructured() to see ALL clickable elements + their text, 3) browserClickElement with a CSS selector like 'a[href*=\"product\"]', 4) browserEval('document.querySelectorAll(\"button, a\")') to list all buttons/links.")
+                    val clicked = BrowserController.clickByText(context, text)
+                    if (clicked) {
+                        ToolResult(true, "Clicked: $text. Call browserReadStructured() or browserGetUrl() to see what happened next.")
+                    } else {
+                        ToolResult(false, "Text not found: '$text'. The text might be: (a) inside an image/iframe, (b) rendered differently, (c) page not fully loaded. Try: 1) browserWaitForElement('button', 3000) then retry, 2) browserReadStructured() to see ALL clickable elements + their text, 3) browserClickElement with a CSS selector like 'a[href*=\"product\"]', 4) browserEval('document.querySelectorAll(\"button, a\")') to list all buttons/links.")
+                    }
                 }
             }
             "browserListClickable" -> {
