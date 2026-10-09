@@ -259,8 +259,15 @@ class OverlayManager(private val context: Context) {
                 btn?.alpha = 1.0f
                 
                 if (screenText.isEmpty() || screenText == "(screen is null)" || screenText == "(no text on screen)") {
-                    speak("I can't see the screen right now. Make sure Accessibility is enabled.")
-                    sendToChat("Can't read screen. Accessibility might need re-enabling.", false)
+                    // v6.0.3: More helpful error — distinguish "no text" from "screenshot broken"
+                    val accessibilityRunning = AgentAccessibilityService.getInstance() != null
+                    val msg = if (accessibilityRunning) {
+                        "Accessibility is enabled, but I can't read text on this screen. It might be an image-only screen (game, video, image). Try opening a screen with text first."
+                    } else {
+                        "Accessibility service is not running. Please re-enable it in Settings → Accessibility → AI Agent."
+                    }
+                    speak(msg)
+                    sendToChat(msg, false)
                 } else {
                     // Use LLM to describe the text naturally
                     val llmResponse = llmClient?.chat(
