@@ -661,6 +661,67 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
+     * v6.1.1: Strategy switching — returns alternative tools to try when a tool fails.
+     * Injected into the conversation after 2 failures of the same tool.
+     */
+    private fun getStrategyAlternatives(toolName: String): String {
+        return when (toolName) {
+            "clickByText" -> """
+                - tap(x, y) with hardcoded coordinates (e.g., tap(970, 180) for YouTube search)
+                - readScreenStructured() to find clickable elements + their bounds, then tap(center)
+                - findElement("description") to use VLM to find the element
+                - browserClickText if in browser mode
+            """.trimIndent()
+            "tap" -> """
+                - readScreenStructured() to find the correct element bounds, then tap(center of bounds)
+                - clickByText("text") to click by text
+                - findElement("description") to use VLM to find coordinates
+                - readScreen() to see what's actually on screen, then recalculate
+            """.trimIndent()
+            "findElement" -> """
+                - readScreenStructured() to get ALL clickable elements with bounds (faster than VLM)
+                - tap(x, y) with known coordinates for the app
+                - clickByText("text") if the element has visible text
+            """.trimIndent()
+            "browserClickText" -> """
+                - browserListClickable() to see ALL clickable elements on the page
+                - browserClickElement("CSS selector") to click by selector
+                - browserReadStructured() to see page structure
+                - browserEval("document.querySelector('button').click()") to run JavaScript
+            """.trimIndent()
+            "launchApp" -> """
+                - openActivity(package, activity) to open a specific activity
+                - openDeepLink(uri) to use a deep link
+                - searchInApp(package, query) if you need to search inside the app
+                - Check listInstalledApps() first — app may not be installed
+            """.trimIndent()
+            "type" -> """
+                - readScreen() first to verify the input field is focused
+                - tap on the input field first, then type
+                - Use submitInput() after typing
+                - If AI Agent is foreground, the type went to wrong app — call launchApp again
+            """.trimIndent()
+            "searchInApp" -> """
+                - launchApp(package) first, then use readScreenStructured + tap to search manually
+                - openDeepLink with the app's search URI
+                - webSearch(query) as fallback (background, no app needed)
+            """.trimIndent()
+            "webSearch" -> """
+                - fetchPageText(url) if you have a specific URL
+                - makeHttpRequest(url) for API endpoints
+                - Try a different search query (more specific)
+                - Try DuckDuckGo directly: fetchPageText("https://html.duckduckgo.com/html/?q=QUERY")
+            """.trimIndent()
+            else -> """
+                - readScreen() to see what's on screen
+                - readScreenStructured() to find clickable elements
+                - Try a completely different approach to the task
+                - Ask the user for help: "I'm stuck, can you guide me?"
+            """.trimIndent()
+        }
+    }
+
+    /**
      * The agent loop — iterative task execution.
      * - LLM sees tool results, decides next steps
      * - Verifies each action with readScreen()
@@ -717,10 +778,19 @@ class MainActivity : AppCompatActivity() {
                 // If no tool calls, the task is complete
                 if (llmResponse.toolCalls.isEmpty()) {
                     finalReply = llmResponse.reply
+
+                    // v6.1.1: ALWAYS LEARN — save successful workflow for future use
+                    if (iteration > 1 && workLog.isNotEmpty()) {
+                        try {
+                            val workflowKey = "workflow_${userMessage.take(40).replace(" ", "_").replace(Regex("[^a-zA-Z0-9_]"), "")}"
+                            database.remember(workflowKey, workLog.toString().take(500))
+                            Log.i("MainActivity", "Saved workflow: $workflowKey (${workLog.length} chars)")
+                        } catch (_: Exception) {}
+                    }
                     break
                 }
 
-                // === INFINITE LOOP DETECTION ===
+                // === INFINITE LOOP DETECTION + STRATEGY SWITCHING (v6.1.1) ===
                 // Check if the same ACTION tool (not readScreen/wait) has been called too many times.
                 // readScreen() and wait() are verification tools — they're expected to repeat.
                 val actionTools = llmResponse.toolCalls.filter { it.name != "readScreen" && it.name != "wait" }
@@ -728,10 +798,28 @@ class MainActivity : AppCompatActivity() {
                     val signature = "${call.name}(${call.args.entries.joinToString(",") { "${it.key}=${it.value}" }})"
                     toolCallHistory.add(signature)
                     val count = toolCallHistory.count { it == signature }
+
+                    // v6.1.1: Strategy switching — after 2 failures of same tool, inject alternatives
+                    if (count == 2) {
+                        val alternatives = getStrategyAlternatives(call.name)
+                        if (alternatives.isNotEmpty()) {
+                            conversation.append("\n\n⚠️ STRATEGY SWITCH: You've tried \"$signature\" twice and it's not working. Try a DIFFERENT approach:\n$alternatives\nDo NOT repeat the same tool. Switch strategy NOW.")
+                            Log.i("MainActivity", "Strategy switch injected for $signature (attempt 2)")
+                        }
+                    }
+
                     if (count >= MAX_REPEATED_TOOLS) {
                         finalReply = "I stopped because I tried \"$signature\" $count times — it's not working. I may be stuck on this step.\n\n$workLog\n\nThe task might need a different approach. Try breaking it into smaller steps, or ask me to read the screen and describe what I see."
                         adapter.updateLastMessage(finalReply)
                         voiceManager.speak("I'm stuck on a step. I tried the same action $count times and it's not working.", currentLang)
+
+                        // v6.1.1: Always learn — even from failure, save what NOT to do
+                        try {
+                            val failKey = "avoid_${call.name}_${userMessage.take(30).replace(" ", "_")}"
+                            database.remember(failKey, "Tried $signature $count times — FAILED. Use alternatives: ${getStrategyAlternatives(call.name)}")
+                            Log.i("MainActivity", "Saved failure lesson: $failKey")
+                        } catch (_: Exception) {}
+
                         return
                     }
                 }
