@@ -41,7 +41,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var database: AgentDatabase
     private var ruleEngine: com.ai.agent.rules.RuleEngine? = null
 
-    private var currentLang = "en-IN"
+    private var currentLang = "en-US"  // v6.1.0: English only (Tamil toggle removed)
 
     // Agent state — supports interruption and task management
     private var agentJob: Job? = null
@@ -400,30 +400,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupVoiceCallbacks() {
-        voiceManager.onPartialResult = { text ->
-            binding.interimText.text = "$text..."
-        }
-        voiceManager.onFinalResult = { text ->
-            binding.interimText.visibility = View.GONE
-            binding.textInput.setText(text)
-            binding.textInput.setSelection(text.length)
-            updateSendButton()
-        }
-        voiceManager.onError = { error ->
-            binding.interimText.visibility = View.GONE
-            binding.voiceBtn.setBackgroundResource(R.drawable.voice_button_bg)
-            showToast(error)
-        }
-        voiceManager.onListeningStateChanged = { isListening ->
-            if (isListening) {
-                binding.voiceBtn.setBackgroundResource(R.drawable.voice_button_listening_bg)
-                binding.interimText.visibility = View.VISIBLE
-                binding.interimText.text = "Listening..."
-            } else {
-                binding.voiceBtn.setBackgroundResource(R.drawable.voice_button_bg)
-                binding.interimText.visibility = View.GONE
-            }
-        }
+        // v6.1.0: Old SpeechRecognizer callbacks removed — using Google Voice intent now
+        // VoiceManager is kept for TTS (text-to-speech) only
         voiceManager.onSpeakingStateChanged = { isSpeaking ->
             binding.stopSpeakBtn.visibility = if (isSpeaking) View.VISIBLE else View.GONE
         }
@@ -432,6 +410,7 @@ class MainActivity : AppCompatActivity() {
     // ==================== v6.0.1: FILE ATTACHMENT ====================
 
     private val ATTACH_FILE_REQUEST = 200
+    private val GOOGLE_VOICE_REQUEST = 201  // v6.1.0: Google voice input
 
     private fun setupFileAttachment() {
         binding.attachBtn.setOnClickListener {
@@ -484,19 +463,42 @@ class MainActivity : AppCompatActivity() {
                 android.widget.Toast.makeText(this, "Attached ${uris.size} file(s). Tell me what to do with them.", android.widget.Toast.LENGTH_SHORT).show()
             }
         }
+
+        // v6.1.0: Google Voice input result
+        if (requestCode == GOOGLE_VOICE_REQUEST && resultCode == android.app.Activity.RESULT_OK) {
+            val results = data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
+            val text = results?.get(0) ?: ""
+            if (text.isNotEmpty()) {
+                binding.textInput.setText(text)
+                binding.textInput.setSelection(text.length)
+                updateSendButton()
+                android.widget.Toast.makeText(this, "Heard: $text", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // v6.1.0: Google Voice input (uses Google's speech recognition intent)
+    private fun startGoogleVoiceInput() {
+        try {
+            val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "en-US")
+                putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Speak now...")
+            }
+            @Suppress("DEPRECATION")
+            startActivityForResult(intent, GOOGLE_VOICE_REQUEST)
+        } catch (e: android.content.ActivityNotFoundException) {
+            android.widget.Toast.makeText(this, "Google voice not available. Install Google app.", android.widget.Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun setupUIListeners() {
-        binding.langBtn.setOnClickListener {
-            currentLang = if (currentLang == "en-IN") "ta-IN" else "en-IN"
-            binding.langBtn.text = if (currentLang == "en-IN") "EN" else "தமி"
-            voiceManager.setLanguage(currentLang)
-        }
-        binding.voiceBtn.setOnClickListener {
+        // v6.1.0: Google Voice button (replaces old voiceBtn + langBtn)
+        binding.googleVoiceBtn.setOnClickListener {
             if (voiceManager.isSpeaking()) {
                 voiceManager.stopSpeaking()
             } else {
-                checkAudioPermissionAndListen()
+                startGoogleVoiceInput()
             }
         }
         binding.stopSpeakBtn.setOnClickListener { voiceManager.stopSpeaking() }

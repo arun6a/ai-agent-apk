@@ -1,20 +1,20 @@
 -- Merging decision tree log ---
 provider#androidx.core.content.FileProvider
-INJECTED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:203:9-211:20
+INJECTED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:332:9-340:20
 	android:grantUriPermissions
-		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:207:13-47
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:336:13-47
 	android:authorities
 		INJECTED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml
-		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:205:13-64
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:334:13-64
 	android:exported
-		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:206:13-37
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:335:13-37
 	android:name
-		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:204:13-62
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:333:13-62
 manifest
-ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:2:1-215:12
-INJECTED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:2:1-215:12
-INJECTED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:2:1-215:12
-INJECTED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:2:1-215:12
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:2:1-344:12
+INJECTED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:2:1-344:12
+INJECTED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:2:1-344:12
+INJECTED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:2:1-344:12
 MERGED from [androidx.databinding:viewbinding:8.6.1] /home/z/.gradle/caches/8.10.2/transforms/b0424ac417fc62e651d469ceb561041b/transformed/viewbinding-8.6.1/AndroidManifest.xml:2:1-7:12
 MERGED from [com.google.android.material:material:1.12.0] /home/z/.gradle/caches/8.10.2/transforms/155c5155c85a7ea1a2b024935ecd15eb/transformed/material-1.12.0/AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.constraintlayout:constraintlayout:2.1.4] /home/z/.gradle/caches/8.10.2/transforms/ce24fec3841dcd13721c600dcd89905d/transformed/constraintlayout-2.1.4/AndroidManifest.xml:2:1-11:12
@@ -260,7 +260,7 @@ ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:49:5
 	android:name
 		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:49:22-74
 application
-ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:51:5-213:19
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:51:5-342:19
 MERGED from [com.google.android.material:material:1.12.0] /home/z/.gradle/caches/8.10.2/transforms/155c5155c85a7ea1a2b024935ecd15eb/transformed/material-1.12.0/AndroidManifest.xml:22:5-20
 MERGED from [com.google.android.material:material:1.12.0] /home/z/.gradle/caches/8.10.2/transforms/155c5155c85a7ea1a2b024935ecd15eb/transformed/material-1.12.0/AndroidManifest.xml:22:5-20
 MERGED from [androidx.constraintlayout:constraintlayout:2.1.4] /home/z/.gradle/caches/8.10.2/transforms/ce24fec3841dcd13721c600dcd89905d/transformed/constraintlayout-2.1.4/AndroidManifest.xml:9:5-20
@@ -539,12 +539,200 @@ data
 ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:198:17-50
 	android:scheme
 		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:198:23-47
-meta-data#android.support.FILE_PROVIDER_PATHS
-ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:208:13-210:63
-	android:resource
-		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:210:17-60
+receiver#com.ai.agent.rules.BluetoothReceiver
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:205:9-211:20
+	android:exported
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:207:13-37
 	android:name
-		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:209:17-67
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:206:13-52
+intent-filter#action:name:android.bluetooth.adapter.action.CONNECTION_STATE_CHANGED
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:208:13-210:29
+action#android.bluetooth.adapter.action.CONNECTION_STATE_CHANGED
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:209:17-100
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:209:25-97
+receiver#com.ai.agent.rules.SystemEventReceiver
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:214:9-225:20
+	android:exported
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:216:13-37
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:215:13-54
+intent-filter#action:name:android.intent.action.AIRPLANE_MODE+action:name:android.intent.action.DEVICE_STORAGE_LOW+action:name:android.intent.action.LOCALE_CHANGED+action:name:android.intent.action.SHUTDOWN+action:name:android.intent.action.TIMEZONE_CHANGED+action:name:android.net.action.DATA_SAVIER_CHANGED
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:217:13-224:29
+action#android.intent.action.AIRPLANE_MODE
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:218:17-78
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:218:25-75
+action#android.intent.action.DEVICE_STORAGE_LOW
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:219:17-83
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:219:25-80
+action#android.intent.action.LOCALE_CHANGED
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:220:17-79
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:220:25-76
+action#android.intent.action.TIMEZONE_CHANGED
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:221:17-81
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:221:25-78
+action#android.intent.action.SHUTDOWN
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:222:17-73
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:222:25-70
+action#android.net.action.DATA_SAVIER_CHANGED
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:223:17-81
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:223:25-78
+receiver#com.ai.agent.rules.UsbReceiver
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:228:9-235:20
+	android:exported
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:230:13-37
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:229:13-46
+intent-filter#action:name:android.hardware.usb.action.USB_DEVICE_ATTACHED+action:name:android.hardware.usb.action.USB_DEVICE_DETACHED
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:231:13-234:29
+action#android.hardware.usb.action.USB_DEVICE_ATTACHED
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:232:17-90
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:232:25-87
+action#android.hardware.usb.action.USB_DEVICE_DETACHED
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:233:17-90
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:233:25-87
+receiver#com.ai.agent.rules.DockReceiver
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:238:9-244:20
+	android:exported
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:240:13-37
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:239:13-47
+intent-filter#action:name:android.intent.action.DOCK_EVENT
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:241:13-243:29
+action#android.intent.action.DOCK_EVENT
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:242:17-75
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:242:25-72
+receiver#com.ai.agent.rules.DayChangeReceiver
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:247:9-254:20
+	android:exported
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:249:13-37
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:248:13-52
+intent-filter#action:name:android.intent.action.DATE_CHANGED+action:name:com.ai.agent.DAY_CHANGED
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:250:13-253:29
+action#com.ai.agent.DAY_CHANGED
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:251:17-67
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:251:25-64
+action#android.intent.action.DATE_CHANGED
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:252:17-77
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:252:25-74
+receiver#com.ai.agent.rules.MusicReceiver
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:257:9-264:20
+	android:exported
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:259:13-37
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:258:13-48
+intent-filter#action:name:android.media.AUDIO_BECOMING_NOISY+action:name:com.android.music.playstatechanged
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:260:13-263:29
+action#android.media.AUDIO_BECOMING_NOISY
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:261:17-77
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:261:25-74
+action#com.android.music.playstatechanged
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:262:17-77
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:262:25-74
+receiver#com.ai.agent.rules.BatteryFullReceiver
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:267:9-273:20
+	android:exported
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:269:13-37
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:268:13-54
+intent-filter#action:name:android.intent.action.BATTERY_CHANGED
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:270:13-272:29
+receiver#com.ai.agent.rules.CalendarReceiver
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:276:9-282:20
+	android:exported
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:278:13-37
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:277:13-51
+intent-filter#action:name:com.ai.agent.CALENDAR_CHECK
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:279:13-281:29
+action#com.ai.agent.CALENDAR_CHECK
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:280:17-70
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:280:25-67
+receiver#com.ai.agent.rules.AppOpenReceiver
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:285:9-292:20
+	android:exported
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:287:13-37
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:286:13-50
+intent-filter#action:name:com.ai.agent.APP_CLOSED+action:name:com.ai.agent.APP_OPENED
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:288:13-291:29
+action#com.ai.agent.APP_OPENED
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:289:17-66
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:289:25-63
+action#com.ai.agent.APP_CLOSED
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:290:17-66
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:290:25-63
+receiver#com.ai.agent.rules.LocationReceiver
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:295:9-301:20
+	android:exported
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:297:13-37
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:296:13-51
+intent-filter#action:name:com.ai.agent.LOCATION_CHECK
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:298:13-300:29
+action#com.ai.agent.LOCATION_CHECK
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:299:17-70
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:299:25-67
+receiver#com.ai.agent.rules.BrightnessReceiver
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:304:9-310:20
+	android:exported
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:306:13-37
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:305:13-53
+intent-filter#action:name:com.ai.agent.BRIGHTNESS_CHECK
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:307:13-309:29
+action#com.ai.agent.BRIGHTNESS_CHECK
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:308:17-72
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:308:25-69
+receiver#com.ai.agent.rules.StorageReceiver
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:313:9-319:20
+	android:exported
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:315:13-37
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:314:13-50
+intent-filter#action:name:android.intent.action.DEVICE_STORAGE_LOW
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:316:13-318:29
+receiver#com.ai.agent.rules.AlarmReceiver
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:322:9-329:20
+	android:exported
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:324:13-37
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:323:13-48
+intent-filter#action:name:com.android.deskclock.action.ALARM_DISMISS+action:name:com.samsung.android.alarm.action.ALARM_DISMISS
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:325:13-328:29
+action#com.android.deskclock.action.ALARM_DISMISS
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:326:17-85
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:326:25-82
+action#com.samsung.android.alarm.action.ALARM_DISMISS
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:327:17-89
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:327:25-86
+meta-data#android.support.FILE_PROVIDER_PATHS
+ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:337:13-339:63
+	android:resource
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:339:17-60
+	android:name
+		ADDED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml:338:17-67
 uses-sdk
 INJECTED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from /home/z/my-project/ai-agent-apk/app/src/main/AndroidManifest.xml
@@ -891,10 +1079,6 @@ ADDED from [androidx.work:work-runtime:2.9.1] /home/z/.gradle/caches/8.10.2/tran
 		ADDED from [androidx.work:work-runtime:2.9.1] /home/z/.gradle/caches/8.10.2/transforms/0c15fe61b14342d2338b65094d1f0bdf/transformed/work-runtime-2.9.1/AndroidManifest.xml:90:13-104
 intent-filter#action:name:android.intent.action.DEVICE_STORAGE_LOW+action:name:android.intent.action.DEVICE_STORAGE_OK
 ADDED from [androidx.work:work-runtime:2.9.1] /home/z/.gradle/caches/8.10.2/transforms/0c15fe61b14342d2338b65094d1f0bdf/transformed/work-runtime-2.9.1/AndroidManifest.xml:95:13-98:29
-action#android.intent.action.DEVICE_STORAGE_LOW
-ADDED from [androidx.work:work-runtime:2.9.1] /home/z/.gradle/caches/8.10.2/transforms/0c15fe61b14342d2338b65094d1f0bdf/transformed/work-runtime-2.9.1/AndroidManifest.xml:96:17-83
-	android:name
-		ADDED from [androidx.work:work-runtime:2.9.1] /home/z/.gradle/caches/8.10.2/transforms/0c15fe61b14342d2338b65094d1f0bdf/transformed/work-runtime-2.9.1/AndroidManifest.xml:96:25-80
 action#android.intent.action.DEVICE_STORAGE_OK
 ADDED from [androidx.work:work-runtime:2.9.1] /home/z/.gradle/caches/8.10.2/transforms/0c15fe61b14342d2338b65094d1f0bdf/transformed/work-runtime-2.9.1/AndroidManifest.xml:97:17-82
 	android:name
@@ -935,10 +1119,6 @@ action#android.intent.action.TIME_SET
 ADDED from [androidx.work:work-runtime:2.9.1] /home/z/.gradle/caches/8.10.2/transforms/0c15fe61b14342d2338b65094d1f0bdf/transformed/work-runtime-2.9.1/AndroidManifest.xml:118:17-73
 	android:name
 		ADDED from [androidx.work:work-runtime:2.9.1] /home/z/.gradle/caches/8.10.2/transforms/0c15fe61b14342d2338b65094d1f0bdf/transformed/work-runtime-2.9.1/AndroidManifest.xml:118:25-70
-action#android.intent.action.TIMEZONE_CHANGED
-ADDED from [androidx.work:work-runtime:2.9.1] /home/z/.gradle/caches/8.10.2/transforms/0c15fe61b14342d2338b65094d1f0bdf/transformed/work-runtime-2.9.1/AndroidManifest.xml:119:17-81
-	android:name
-		ADDED from [androidx.work:work-runtime:2.9.1] /home/z/.gradle/caches/8.10.2/transforms/0c15fe61b14342d2338b65094d1f0bdf/transformed/work-runtime-2.9.1/AndroidManifest.xml:119:25-78
 receiver#androidx.work.impl.background.systemalarm.ConstraintProxyUpdateReceiver
 ADDED from [androidx.work:work-runtime:2.9.1] /home/z/.gradle/caches/8.10.2/transforms/0c15fe61b14342d2338b65094d1f0bdf/transformed/work-runtime-2.9.1/AndroidManifest.xml:122:9-131:20
 	android:enabled

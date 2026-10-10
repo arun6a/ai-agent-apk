@@ -55,7 +55,27 @@ class AgentAccessibilityService : AccessibilityService() {
         // Track the current foreground package
         event?.let {
             if (it.packageName != null && it.eventType == android.view.accessibility.AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-                currentForegroundPackage = it.packageName.toString()
+                val newPackage = it.packageName.toString()
+                if (newPackage != currentForegroundPackage && newPackage != "com.ai.agent") {
+                    // v6.1.0: Fire app_opened / app_closed broadcasts for triggers
+                    val oldPackage = currentForegroundPackage
+                    currentForegroundPackage = newPackage
+                    Log.i(TAG, "App changed: $oldPackage → $newPackage")
+                    if (oldPackage != null) {
+                        // Previous app closed
+                        val closeIntent = android.content.Intent("com.ai.agent.APP_CLOSED").apply {
+                            putExtra("package_name", oldPackage)
+                        }
+                        sendBroadcast(closeIntent)
+                    }
+                    // New app opened
+                    val openIntent = android.content.Intent("com.ai.agent.APP_OPENED").apply {
+                        putExtra("package_name", newPackage)
+                    }
+                    sendBroadcast(openIntent)
+                } else {
+                    currentForegroundPackage = newPackage
+                }
             }
         }
     }

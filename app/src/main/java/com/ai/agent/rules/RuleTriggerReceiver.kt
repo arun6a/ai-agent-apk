@@ -13,24 +13,45 @@ import com.ai.agent.storage.AgentDatabase
 /**
  * Receives AlarmManager broadcasts for scheduled time rules.
  *
- * v5.0.0 — WorkManager integration:
- * When a rule fires (via AlarmManager — exact timing for HH:MM):
- * 1. This receiver is triggered by AlarmManager
- * 2. We enqueue a RuleWorker via WorkManager — system-managed background execution
- * 3. RuleWorker starts AgentService (foreground) with the rule's action
- * 4. We reschedule the rule for its next occurrence
- *
- * Why use BOTH AlarmManager + WorkManager:
- * - AlarmManager: precise HH:MM timing (fires exactly at 07:00, fires in Doze)
- * - WorkManager: survives app kills, retries on failure, system-managed process
- *
- * If the app is killed between AlarmManager firing and AgentService starting,
- * WorkManager will still execute the worker (it runs in a system process).
+ * v6.1.0: Added companion method triggerRuleAction() with optional context
+ * parameter for new trigger types (Bluetooth, Location, Calendar, etc.)
  */
 class RuleTriggerReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "RuleTriggerReceiver"
+
+        /**
+         * Trigger a rule's action (used by other receivers).
+         * v6.1.0: Added for Bluetooth, Location, Calendar, etc. triggers.
+         */
+        fun triggerRuleAction(context: Context, rule: AgentDatabase.Rule, triggerContext: String = "") {
+            try {
+                val db = AgentDatabase(context)
+                db.logAction("Rule fired: ${rule.name} — ${rule.action}" +
+                    if (triggerContext.isNotEmpty()) " | Context: $triggerContext" else "")
+
+                val workRequest = OneTimeWorkRequestBuilder<RuleWorker>()
+                    .setInputData(
+                        workDataOf(
+                            RuleWorker.KEY_RULE_ID to rule.id,
+                            RuleWorker.KEY_RULE_NAME to rule.name,
+                            RuleWorker.KEY_RULE_ACTION to rule.action,
+                            RuleWorker.KEY_RULE_TRIGGER to rule.triggerType
+                        )
+                    )
+                    .build()
+
+                WorkManager.getInstance(context).enqueueUniqueWork(
+                    "rule_${rule.id}_${System.currentTimeMillis()}",
+                    androidx.work.ExistingWorkPolicy.REPLACE,
+                    workRequest
+                )
+                Log.i(TAG, "Enqueued RuleWorker for ${rule.name} (trigger=${rule.triggerType})")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to trigger rule ${rule.name}", e)
+            }
+        }
     }
 
     override fun onReceive(context: Context, intent: Intent) {

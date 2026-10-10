@@ -74,7 +74,7 @@ class ToolExecutor(private val context: Context) {
             // Media
             "mediaPlayPause", "mediaNext", "mediaPrevious", "takePhoto",
             // Skills
-            "executeSkill", "listSkills",
+            "executeSkill", "listSkills", "createSkill", "deleteSkill", "getSkill",
             // Async
             "wait", "waitAndContinue"
         )
@@ -1472,6 +1472,7 @@ class ToolExecutor(private val context: Context) {
             "sendAttachmentTo" -> {
                 val filename = call.args["filename"] as? String ?: return ToolResult(false, "missing filename")
                 val appPackage = call.args["package"] as? String ?: return ToolResult(false, "missing package")
+                val caption = call.args["caption"] as? String  // v6.1.0: optional caption
                 val dir = java.io.File("/storage/emulated/0/Documents/ai-workspace/attachments")
                 val file = java.io.File(dir, filename).let { if (it.exists()) it else java.io.File(filename) }
                 if (!file.exists()) return ToolResult(false, "File not found: $filename")
@@ -1482,14 +1483,74 @@ class ToolExecutor(private val context: Context) {
                     val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                         type = context.contentResolver.getType(uri) ?: "*/*"
                         putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                        if (caption != null) {
+                            putExtra(android.content.Intent.EXTRA_TEXT, caption)
+                        }
                         setPackage(appPackage)
                         addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
                     context.startActivity(shareIntent)
-                    ToolResult(true, "Sent $filename to $appPackage")
+                    val msg = if (caption != null) "Sent $filename to $appPackage with caption: $caption" else "Sent $filename to $appPackage"
+                    ToolResult(true, msg)
                 } catch (e: Exception) {
                     ToolResult(false, "Failed to send: ${e.message}")
+                }
+            }
+            // ==================== SKILL MANAGEMENT (v6.1.0) ====================
+            "createSkill" -> {
+                val name = call.args["name"] as? String ?: return ToolResult(false, "missing name")
+                val description = call.args["description"] as? String ?: return ToolResult(false, "missing description")
+                val trigger = call.args["trigger"] as? String ?: return ToolResult(false, "missing trigger")
+                val instructions = call.args["instructions"] as? String ?: return ToolResult(false, "missing instructions")
+                try {
+                    val skillsDir = java.io.File("/storage/emulated/0/Documents/ai-workspace/skills")
+                    if (!skillsDir.exists()) skillsDir.mkdirs()
+                    val skillFile = java.io.File(skillsDir, "${name.replace(" ", "_")}.md")
+                    val content = """---
+name: ${name.replace(" ", "-")}
+description: $description
+trigger: $trigger
+version: 1.0
+---
+# ${name.replaceFirstChar { it.uppercase() }}
+
+$instructions
+"""
+                    skillFile.writeText(content)
+                    ToolResult(true, "Skill '$name' created successfully at ${skillFile.name}. It will be available next time skills are loaded.")
+                } catch (e: Exception) {
+                    ToolResult(false, "Failed to create skill: ${e.message}")
+                }
+            }
+            "deleteSkill" -> {
+                val name = call.args["name"] as? String ?: return ToolResult(false, "missing name")
+                try {
+                    val skillsDir = java.io.File("/storage/emulated/0/Documents/ai-workspace/skills")
+                    val assetSkillsDir = java.io.File("assets/skills")  // read-only, can't delete
+                    val userSkillFile = java.io.File(skillsDir, "${name.replace(" ", "_")}.md")
+                    if (userSkillFile.exists()) {
+                        userSkillFile.delete()
+                        ToolResult(true, "Skill '$name' deleted.")
+                    } else {
+                        ToolResult(false, "Skill '$name' not found in user skills. Built-in skills (in assets/) cannot be deleted.")
+                    }
+                } catch (e: Exception) {
+                    ToolResult(false, "Failed to delete skill: ${e.message}")
+                }
+            }
+            "getSkill" -> {
+                val name = call.args["name"] as? String ?: return ToolResult(false, "missing name")
+                try {
+                    val skillManager = com.ai.agent.skills.SkillManager(context).also { it.loadSkills() }
+                    val skill = skillManager.findSkill(name)
+                    if (skill != null) {
+                        ToolResult(true, "Skill: ${skill.name}\nDescription: ${skill.description}\nTriggers: ${skill.triggers}\n\nInstructions:\n${skill.body}")
+                    } else {
+                        ToolResult(false, "Skill '$name' not found. Use listSkills() to see available skills.")
+                    }
+                } catch (e: Exception) {
+                    ToolResult(false, "Failed to get skill: ${e.message}")
                 }
             }
             // ==================== SKILLS ====================

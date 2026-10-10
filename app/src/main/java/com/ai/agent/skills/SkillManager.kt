@@ -52,9 +52,10 @@ class SkillManager(private val context: Context) {
 
     fun loadSkills(): List<Skill> {
         val loaded = mutableListOf<Skill>()
+        // v6.1.0: Load from assets (built-in) + user storage (created via chat)
         try {
             val assetFiles = context.assets.list(SKILLS_DIR) ?: emptyArray()
-            Log.i(TAG, "Found ${assetFiles.size} skill files: ${assetFiles.toList()}")
+            Log.i(TAG, "Found ${assetFiles.size} built-in skill files: ${assetFiles.toList()}")
 
             for (fileName in assetFiles) {
                 if (!fileName.endsWith(".md")) continue
@@ -63,7 +64,7 @@ class SkillManager(private val context: Context) {
                     val skill = parseSkill(content, fileName)
                     if (skill != null) {
                         loaded.add(skill)
-                        Log.i(TAG, "Loaded skill: ${skill.name} (triggers: ${skill.triggers})")
+                        Log.i(TAG, "Loaded built-in skill: ${skill.name} (triggers: ${skill.triggers})")
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to load skill: $fileName", e)
@@ -72,8 +73,37 @@ class SkillManager(private val context: Context) {
         } catch (e: Exception) {
             Log.w(TAG, "No skills directory found in assets", e)
         }
+
+        // v6.1.0: Load user-created skills from storage
+        try {
+            val userSkillsDir = java.io.File("/storage/emulated/0/Documents/ai-workspace/skills")
+            if (userSkillsDir.exists()) {
+                val userFiles = userSkillsDir.listFiles { f -> f.extension == "md" } ?: emptyArray()
+                Log.i(TAG, "Found ${userFiles.size} user skill files")
+                for (file in userFiles) {
+                    try {
+                        val content = file.readText()
+                        val skill = parseSkill(content, file.name)
+                        if (skill != null) {
+                            loaded.add(skill)
+                            Log.i(TAG, "Loaded user skill: ${skill.name} (triggers: ${skill.triggers})")
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to load user skill: ${file.name}", e)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to load user skills", e)
+        }
+
         skills = loaded
         return loaded
+    }
+
+    /** v6.1.0: Find a skill by name (for getSkill tool) */
+    fun findSkill(name: String): Skill? {
+        return skills.find { it.name.equals(name, ignoreCase = true) || it.name.replace("-", " ").equals(name, ignoreCase = true) }
     }
 
     fun getSkills(): List<Skill> = skills

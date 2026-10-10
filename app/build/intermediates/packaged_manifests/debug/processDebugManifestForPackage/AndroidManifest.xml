@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.ai.agent"
-    android:versionCode="100"
-    android:versionName="6.0.5" >
+    android:versionCode="101"
+    android:versionName="6.1.0" >
 
     <uses-sdk
         android:minSdkVersion="24"
@@ -211,6 +211,136 @@
                 <action android:name="android.intent.action.PACKAGE_REMOVED" />
 
                 <data android:scheme="package" />
+            </intent-filter>
+        </receiver>
+
+        <!-- v6.1.0: New trigger receivers -->
+
+
+        <!-- Bluetooth connected/disconnected -->
+        <receiver
+            android:name="com.ai.agent.rules.BluetoothReceiver"
+            android:exported="false" >
+            <intent-filter>
+                <action android:name="android.bluetooth.adapter.action.CONNECTION_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- System events (airplane mode, storage low, locale, timezone, shutdown, data saver) -->
+        <receiver
+            android:name="com.ai.agent.rules.SystemEventReceiver"
+            android:exported="false" >
+            <intent-filter>
+                <action android:name="android.intent.action.AIRPLANE_MODE" />
+                <action android:name="android.intent.action.DEVICE_STORAGE_LOW" />
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.SHUTDOWN" />
+                <action android:name="android.net.action.DATA_SAVIER_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- USB device attached/detached -->
+        <receiver
+            android:name="com.ai.agent.rules.UsbReceiver"
+            android:exported="false" >
+            <intent-filter>
+                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+                <action android:name="android.hardware.usb.action.USB_DEVICE_DETACHED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Dock event -->
+        <receiver
+            android:name="com.ai.agent.rules.DockReceiver"
+            android:exported="false" >
+            <intent-filter>
+                <action android:name="android.intent.action.DOCK_EVENT" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Day change (midnight) -->
+        <receiver
+            android:name="com.ai.agent.rules.DayChangeReceiver"
+            android:exported="false" >
+            <intent-filter>
+                <action android:name="com.ai.agent.DAY_CHANGED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Music/audio playback -->
+        <receiver
+            android:name="com.ai.agent.rules.MusicReceiver"
+            android:exported="false" >
+            <intent-filter>
+                <action android:name="android.media.AUDIO_BECOMING_NOISY" />
+                <action android:name="com.android.music.playstatechanged" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Battery full (100%) -->
+        <receiver
+            android:name="com.ai.agent.rules.BatteryFullReceiver"
+            android:exported="false" >
+            <intent-filter>
+                <action android:name="android.intent.action.BATTERY_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Calendar event check -->
+        <receiver
+            android:name="com.ai.agent.rules.CalendarReceiver"
+            android:exported="false" >
+            <intent-filter>
+                <action android:name="com.ai.agent.CALENDAR_CHECK" />
+            </intent-filter>
+        </receiver>
+
+        <!-- App open/close (triggered by accessibility service) -->
+        <receiver
+            android:name="com.ai.agent.rules.AppOpenReceiver"
+            android:exported="false" >
+            <intent-filter>
+                <action android:name="com.ai.agent.APP_OPENED" />
+                <action android:name="com.ai.agent.APP_CLOSED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Location check (periodic) -->
+        <receiver
+            android:name="com.ai.agent.rules.LocationReceiver"
+            android:exported="false" >
+            <intent-filter>
+                <action android:name="com.ai.agent.LOCATION_CHECK" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Brightness check (periodic) -->
+        <receiver
+            android:name="com.ai.agent.rules.BrightnessReceiver"
+            android:exported="false" >
+            <intent-filter>
+                <action android:name="com.ai.agent.BRIGHTNESS_CHECK" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Storage low (standalone) -->
+        <receiver
+            android:name="com.ai.agent.rules.StorageReceiver"
+            android:exported="false" >
+            <intent-filter>
+                <action android:name="android.intent.action.DEVICE_STORAGE_LOW" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Alarm dismissed (best-effort) -->
+        <receiver
+            android:name="com.ai.agent.rules.AlarmReceiver"
+            android:exported="false" >
+            <intent-filter>
+                <action android:name="com.android.deskclock.action.ALARM_DISMISS" />
+                <action android:name="com.samsung.android.alarm.action.ALARM_DISMISS" />
             </intent-filter>
         </receiver>
 

@@ -70,6 +70,7 @@ id btnToggleMemoryKnowledge
 id btnWebBack
 id btnWebForward
 id footer
+id googleVoiceBtn
 id header
 id interimText
 id langBtn

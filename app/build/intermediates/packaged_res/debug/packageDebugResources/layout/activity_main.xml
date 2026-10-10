@@ -133,27 +133,13 @@
             android:contentDescription="Attach file"
             android:layout_marginEnd="6dp" />
 
-        <Button
-            android:id="@+id/langBtn"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:minWidth="0dp"
-            android:text="EN"
-            android:textSize="11sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_secondary"
-            android:background="@drawable/control_button_bg"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:layout_marginEnd="8dp" />
-
         <ImageButton
-            android:id="@+id/voiceBtn"
+            android:id="@+id/googleVoiceBtn"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:src="@drawable/ic_mic"
             android:background="@drawable/voice_button_bg"
-            android:contentDescription="@string/voice_input"
+            android:contentDescription="Google voice input"
             android:layout_marginEnd="8dp" />
 
         <EditText

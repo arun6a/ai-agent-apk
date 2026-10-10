@@ -190,6 +190,14 @@ class OverlayManager(private val context: Context) {
     }
 
     private fun onOverlayTapped() {
+        // v6.1.0: If AI is speaking, tap STOPS the speech (don't read screen)
+        if (tts?.isSpeaking == true) {
+            Log.i(TAG, "Overlay tapped — stopping TTS")
+            tts?.stop()
+            Toast.makeText(context, "Stopped speaking", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         val service = AgentAccessibilityService.getInstance()
         if (service == null) {
             // Check if the service is at least ENABLED in system settings (just not bound yet).
