@@ -82,6 +82,13 @@
             android:label="Rules"
             android:parentActivityName=".MainActivity" />
 
+        <!-- v6.1.3: Hub activity (Skills + Rules + Tools + Plugins + Settings) -->
+        <activity
+            android:name=".ui.HubActivity"
+            android:exported="false"
+            android:label="Hub"
+            android:parentActivityName=".MainActivity" />
+
         <!-- Settings activity -->
         <activity
             android:name=".ui.SettingsActivity"

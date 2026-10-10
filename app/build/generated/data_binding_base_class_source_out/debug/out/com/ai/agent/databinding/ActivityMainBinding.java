@@ -37,6 +37,9 @@ public final class ActivityMainBinding implements ViewBinding {
   public final LinearLayout header;
 
   @NonNull
+  public final ImageButton hubBtn;
+
+  @NonNull
   public final TextView interimText;
 
   @NonNull
@@ -46,13 +49,7 @@ public final class ActivityMainBinding implements ViewBinding {
   public final ImageButton overlayBtn;
 
   @NonNull
-  public final ImageButton rulesBtn;
-
-  @NonNull
   public final ImageButton sendBtn;
-
-  @NonNull
-  public final ImageButton settingsBtn;
 
   @NonNull
   public final View statusDot;
@@ -68,22 +65,20 @@ public final class ActivityMainBinding implements ViewBinding {
 
   private ActivityMainBinding(@NonNull ConstraintLayout rootView, @NonNull ImageButton attachBtn,
       @NonNull LinearLayout footer, @NonNull ImageButton googleVoiceBtn,
-      @NonNull LinearLayout header, @NonNull TextView interimText,
+      @NonNull LinearLayout header, @NonNull ImageButton hubBtn, @NonNull TextView interimText,
       @NonNull RecyclerView messagesList, @NonNull ImageButton overlayBtn,
-      @NonNull ImageButton rulesBtn, @NonNull ImageButton sendBtn, @NonNull ImageButton settingsBtn,
-      @NonNull View statusDot, @NonNull TextView statusText, @NonNull Button stopSpeakBtn,
-      @NonNull EditText textInput) {
+      @NonNull ImageButton sendBtn, @NonNull View statusDot, @NonNull TextView statusText,
+      @NonNull Button stopSpeakBtn, @NonNull EditText textInput) {
     this.rootView = rootView;
     this.attachBtn = attachBtn;
     this.footer = footer;
     this.googleVoiceBtn = googleVoiceBtn;
     this.header = header;
+    this.hubBtn = hubBtn;
     this.interimText = interimText;
     this.messagesList = messagesList;
     this.overlayBtn = overlayBtn;
-    this.rulesBtn = rulesBtn;
     this.sendBtn = sendBtn;
-    this.settingsBtn = settingsBtn;
     this.statusDot = statusDot;
     this.statusText = statusText;
     this.stopSpeakBtn = stopSpeakBtn;
@@ -141,6 +136,12 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.hubBtn;
+      ImageButton hubBtn = ViewBindings.findChildViewById(rootView, id);
+      if (hubBtn == null) {
+        break missingId;
+      }
+
       id = R.id.interimText;
       TextView interimText = ViewBindings.findChildViewById(rootView, id);
       if (interimText == null) {
@@ -159,21 +160,9 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
-      id = R.id.rulesBtn;
-      ImageButton rulesBtn = ViewBindings.findChildViewById(rootView, id);
-      if (rulesBtn == null) {
-        break missingId;
-      }
-
       id = R.id.sendBtn;
       ImageButton sendBtn = ViewBindings.findChildViewById(rootView, id);
       if (sendBtn == null) {
-        break missingId;
-      }
-
-      id = R.id.settingsBtn;
-      ImageButton settingsBtn = ViewBindings.findChildViewById(rootView, id);
-      if (settingsBtn == null) {
         break missingId;
       }
 
@@ -202,8 +191,8 @@ public final class ActivityMainBinding implements ViewBinding {
       }
 
       return new ActivityMainBinding((ConstraintLayout) rootView, attachBtn, footer, googleVoiceBtn,
-          header, interimText, messagesList, overlayBtn, rulesBtn, sendBtn, settingsBtn, statusDot,
-          statusText, stopSpeakBtn, textInput);
+          header, hubBtn, interimText, messagesList, overlayBtn, sendBtn, statusDot, statusText,
+          stopSpeakBtn, textInput);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

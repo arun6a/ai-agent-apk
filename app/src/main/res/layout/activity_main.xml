@@ -71,21 +71,12 @@
             android:layout_marginStart="8dp" />
 
         <ImageButton
-            android:id="@+id/rulesBtn"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:src="@drawable/ic_rules"
-            android:background="@drawable/control_button_bg"
-            android:contentDescription="Rules and scheduled tasks"
-            android:layout_marginStart="8dp" />
-
-        <ImageButton
-            android:id="@+id/settingsBtn"
+            android:id="@+id/hubBtn"
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:src="@drawable/ic_settings"
             android:background="@drawable/control_button_bg"
-            android:contentDescription="Settings"
+            android:contentDescription="Hub — Skills, Rules, Tools, Plugins"
             android:layout_marginStart="8dp" />
     </LinearLayout>
 

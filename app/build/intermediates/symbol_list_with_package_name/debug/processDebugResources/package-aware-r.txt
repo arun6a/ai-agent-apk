@@ -3424,6 +3424,7 @@ id home
 id homeAsUp
 id honorRequest
 id horizontal_only
+id hubBtn
 id icon
 id icon_group
 id icon_only
@@ -3594,7 +3595,6 @@ id right_icon
 id right_side
 id rounded
 id row_index_key
-id rulesBtn
 id save_non_transition_alpha
 id save_overlay_view
 id sawtooth
@@ -3619,7 +3619,6 @@ id select_dialog_listview
 id selected
 id selection_type
 id sendBtn
-id settingsBtn
 id sharedValueSet
 id sharedValueUnset
 id shortcut

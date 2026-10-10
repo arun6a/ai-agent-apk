@@ -72,6 +72,7 @@ id btnWebForward
 id footer
 id googleVoiceBtn
 id header
+id hubBtn
 id interimText
 id langBtn
 id loadingBar
@@ -86,9 +87,7 @@ id nav_rules
 id nav_settings
 id overlayBtn
 id overlayButton
-id rulesBtn
 id sendBtn
-id settingsBtn
 id statusDot
 id statusText
 id stopSpeakBtn

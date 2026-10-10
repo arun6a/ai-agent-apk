@@ -541,37 +541,9 @@ class MainActivity : AppCompatActivity() {
             true
         }
 
-        // Rules button — shows options menu
-        binding.rulesBtn.setOnClickListener {
-            val options = arrayOf("Rules & Scheduled Tasks", "Enable Notification Access", "Clear Chat History", "Settings")
-            AlertDialog.Builder(this)
-                .setTitle("Options")
-                .setItems(options) { _, which ->
-                    when (which) {
-                        0 -> startActivity(Intent(this, com.ai.agent.ui.RulesActivity::class.java))
-                        1 -> startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
-                        2 -> {
-                            AlertDialog.Builder(this)
-                                .setTitle("Clear History")
-                                .setMessage("Delete all chat history?")
-                                .setPositiveButton("Clear") { _, _ ->
-                                    database.clearConversations()
-                                    adapter.clear()
-                                    adapter.addMessage(ChatMessage(text = "History cleared.", isUser = false))
-                                    showToast("History cleared")
-                                }
-                                .setNegativeButton("Cancel", null)
-                                .show()
-                        }
-                        3 -> startActivity(Intent(this, com.ai.agent.ui.SettingsActivity::class.java))
-                    }
-                }
-                .show()
-        }
-
-        // Settings button
-        binding.settingsBtn.setOnClickListener {
-            startActivity(Intent(this, com.ai.agent.ui.SettingsActivity::class.java))
+        // v6.1.3: Hub button — opens new HubActivity (Skills + Rules + Tools + Plugins + Settings)
+        binding.hubBtn.setOnClickListener {
+            startActivity(Intent(this, com.ai.agent.ui.HubActivity::class.java))
         }
         binding.textInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}

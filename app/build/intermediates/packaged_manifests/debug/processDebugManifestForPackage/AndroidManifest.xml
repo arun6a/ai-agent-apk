@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.ai.agent"
-    android:versionCode="103"
-    android:versionName="6.1.2" >
+    android:versionCode="104"
+    android:versionName="6.1.3" >
 
     <uses-sdk
         android:minSdkVersion="24"
@@ -95,6 +95,13 @@
             android:name="com.ai.agent.ui.RulesActivity"
             android:exported="false"
             android:label="Rules"
+            android:parentActivityName="com.ai.agent.MainActivity" />
+
+        <!-- v6.1.3: Hub activity (Skills + Rules + Tools + Plugins + Settings) -->
+        <activity
+            android:name="com.ai.agent.ui.HubActivity"
+            android:exported="false"
+            android:label="Hub"
             android:parentActivityName="com.ai.agent.MainActivity" />
 
         <!-- Settings activity -->

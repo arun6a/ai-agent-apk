@@ -1,34 +1,38 @@
 [
     {
-        "merged": "com.ai.agent.app-mergeDebugResources-42:/layout/overlay_button.xml",
-        "source": "com.ai.agent.app-main-45:/layout/overlay_button.xml"
-    },
-    {
-        "merged": "com.ai.agent.app-mergeDebugResources-42:/layout/fragment_chat.xml",
-        "source": "com.ai.agent.app-main-45:/layout/fragment_chat.xml"
+        "merged": "/home/z/.gradle/daemon/8.10.2/com.ai.agent.app-mergeDebugResources-42:/layout/fragment_chat.xml",
+        "source": "/home/z/.gradle/daemon/8.10.2/com.ai.agent.app-main-45:/layout/fragment_chat.xml"
     },
     {
         "merged": "com.ai.agent.app-mergeDebugResources-42:/layout/activity_main.xml",
         "source": "com.ai.agent.app-main-45:/layout/activity_main.xml"
     },
     {
-        "merged": "com.ai.agent.app-mergeDebugResources-42:/layout/fragment_simple.xml",
-        "source": "com.ai.agent.app-main-45:/layout/fragment_simple.xml"
+        "merged": "/home/z/.gradle/daemon/8.10.2/com.ai.agent.app-mergeDebugResources-42:/layout/fragment_agent.xml",
+        "source": "/home/z/.gradle/daemon/8.10.2/com.ai.agent.app-main-45:/layout/fragment_agent.xml"
     },
     {
-        "merged": "com.ai.agent.app-mergeDebugResources-42:/layout/fragment_memory.xml",
-        "source": "com.ai.agent.app-main-45:/layout/fragment_memory.xml"
+        "merged": "/home/z/.gradle/daemon/8.10.2/com.ai.agent.app-mergeDebugResources-42:/layout/overlay_button.xml",
+        "source": "/home/z/.gradle/daemon/8.10.2/com.ai.agent.app-main-45:/layout/overlay_button.xml"
     },
     {
-        "merged": "com.ai.agent.app-mergeDebugResources-42:/layout/fragment_agent.xml",
-        "source": "com.ai.agent.app-main-45:/layout/fragment_agent.xml"
+        "merged": "/home/z/.gradle/daemon/8.10.2/com.ai.agent.app-mergeDebugResources-42:/layout/activity_main.xml",
+        "source": "/home/z/.gradle/daemon/8.10.2/com.ai.agent.app-main-45:/layout/activity_main.xml"
     },
     {
-        "merged": "com.ai.agent.app-mergeDebugResources-42:/layout/item_message.xml",
-        "source": "com.ai.agent.app-main-45:/layout/item_message.xml"
+        "merged": "/home/z/.gradle/daemon/8.10.2/com.ai.agent.app-mergeDebugResources-42:/layout/activity_browser.xml",
+        "source": "/home/z/.gradle/daemon/8.10.2/com.ai.agent.app-main-45:/layout/activity_browser.xml"
     },
     {
-        "merged": "com.ai.agent.app-mergeDebugResources-42:/layout/activity_browser.xml",
-        "source": "com.ai.agent.app-main-45:/layout/activity_browser.xml"
+        "merged": "/home/z/.gradle/daemon/8.10.2/com.ai.agent.app-mergeDebugResources-42:/layout/fragment_simple.xml",
+        "source": "/home/z/.gradle/daemon/8.10.2/com.ai.agent.app-main-45:/layout/fragment_simple.xml"
+    },
+    {
+        "merged": "/home/z/.gradle/daemon/8.10.2/com.ai.agent.app-mergeDebugResources-42:/layout/fragment_memory.xml",
+        "source": "/home/z/.gradle/daemon/8.10.2/com.ai.agent.app-main-45:/layout/fragment_memory.xml"
+    },
+    {
+        "merged": "/home/z/.gradle/daemon/8.10.2/com.ai.agent.app-mergeDebugResources-42:/layout/item_message.xml",
+        "source": "/home/z/.gradle/daemon/8.10.2/com.ai.agent.app-main-45:/layout/item_message.xml"
     }
 ]
