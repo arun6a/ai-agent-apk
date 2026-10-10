@@ -103,6 +103,9 @@ class MainActivity : AppCompatActivity() {
         // Start rule engine directly from Activity (not depending on AgentService)
         startRuleEngine()
 
+        // v6.0.5: Start mini HTTP server for remote screen control
+        com.ai.agent.service.AgentHttpServer.start(this)
+
         // Check all permissions on startup
         checkAllPermissions()
 

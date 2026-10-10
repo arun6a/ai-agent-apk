@@ -1,0 +1,10 @@
+<resources>
+    <style name="Theme.AIAgent" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/accent_emerald</item>
+        <item name="colorPrimaryVariant">@color/accent_emerald_light</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        <item name="android:windowBackground">@color/bg_dark</item>
+        <item name="android:statusBarColor">@color/bg_surface</item>
+        <item name="android:navigationBarColor">@color/bg_surface</item>
+    </style>
+</resources>

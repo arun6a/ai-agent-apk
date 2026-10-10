@@ -1,24 +1,2 @@
-# Build artifacts
-app/build/
-build/
-.gradle/
-
-# Local configuration (machine-specific)
-local.properties
-
-# Android Studio / IDE files
-*.iml
-.idea/
-captures/
-
-# Large files (use GitHub Releases instead)
-*.apk
-*.aab
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-dev.log
+.env
+*.env

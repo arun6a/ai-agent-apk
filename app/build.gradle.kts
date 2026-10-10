@@ -11,8 +11,8 @@ android {
         applicationId = "com.ai.agent"
         minSdk = 24
         targetSdk = 34
-        versionCode = 99
-        versionName = "6.0.4"
+        versionCode = 100
+        versionName = "6.0.5"
     }
 
     buildTypes {
@@ -48,4 +48,7 @@ dependencies {
     implementation("com.google.mlkit:text-recognition:16.0.0")
     // WorkManager — reliable background execution for rules (survives app kills, reboots)
     implementation("androidx.work:work-runtime-ktx:2.9.1")
+    // NanoHTTPD — mini HTTP server inside the app (v6.0.5)
+    // Lets sandbox AIs control the tablet screen via accessibility service over HTTP
+    implementation("org.nanohttpd:nanohttpd:2.3.1")
 }

@@ -1,0 +1,12 @@
+<resources>
+    <color name="bg_dark">#FF09090B</color>
+    <color name="bg_surface">#FF18181B</color>
+    <color name="bg_surface_variant">#FF27272A</color>
+    <color name="accent_emerald">#FF059669</color>
+    <color name="accent_emerald_light">#FF10B981</color>
+    <color name="accent_red">#FFDC2626</color>
+    <color name="text_primary">#FFFAFAFA</color>
+    <color name="text_secondary">#FFA1A1AA</color>
+    <color name="text_muted">#FF52525B</color>
+    <color name="border">#FF3F3F46</color>
+</resources>

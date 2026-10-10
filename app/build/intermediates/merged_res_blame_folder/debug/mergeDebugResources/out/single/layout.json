@@ -1,0 +1,34 @@
+[
+    {
+        "merged": "com.ai.agent.app-mergeDebugResources-42:/layout/overlay_button.xml",
+        "source": "com.ai.agent.app-main-45:/layout/overlay_button.xml"
+    },
+    {
+        "merged": "com.ai.agent.app-mergeDebugResources-42:/layout/fragment_chat.xml",
+        "source": "com.ai.agent.app-main-45:/layout/fragment_chat.xml"
+    },
+    {
+        "merged": "com.ai.agent.app-mergeDebugResources-42:/layout/activity_main.xml",
+        "source": "com.ai.agent.app-main-45:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.ai.agent.app-mergeDebugResources-42:/layout/fragment_simple.xml",
+        "source": "com.ai.agent.app-main-45:/layout/fragment_simple.xml"
+    },
+    {
+        "merged": "com.ai.agent.app-mergeDebugResources-42:/layout/fragment_memory.xml",
+        "source": "com.ai.agent.app-main-45:/layout/fragment_memory.xml"
+    },
+    {
+        "merged": "com.ai.agent.app-mergeDebugResources-42:/layout/fragment_agent.xml",
+        "source": "com.ai.agent.app-main-45:/layout/fragment_agent.xml"
+    },
+    {
+        "merged": "com.ai.agent.app-mergeDebugResources-42:/layout/item_message.xml",
+        "source": "com.ai.agent.app-main-45:/layout/item_message.xml"
+    },
+    {
+        "merged": "com.ai.agent.app-mergeDebugResources-42:/layout/activity_browser.xml",
+        "source": "com.ai.agent.app-main-45:/layout/activity_browser.xml"
+    }
+]
