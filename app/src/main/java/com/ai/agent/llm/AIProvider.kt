@@ -169,9 +169,9 @@ object AIProvider {
             defaultEndpoint = "https://generativelanguage.googleapis.com/v1beta",
             needsApiKey = true,
             models = listOf(
-                ModelInfo("gemini-2.0-flash", "Gemini 2.0 Flash (Recommended)", "Fast, capable, vision-capable. Free tier."),
-                ModelInfo("gemini-2.5-flash", "Gemini 2.5 Flash", "Newer, smarter. Free tier."),
-                ModelInfo("gemini-1.5-flash", "Gemini 1.5 Flash", "Stable, fast. Free tier."),
+                ModelInfo("gemini-3.8-flash", "Gemini 3.8 Flash (Latest)", "Newest Gemini. Fast, capable, vision. Free tier."),
+                ModelInfo("gemini-2.5-flash", "Gemini 2.5 Flash", "Fast, capable. Free tier."),
+                ModelInfo("gemini-2.0-flash", "Gemini 2.0 Flash (Legacy)", "Older but stable. May be deprecated. Free tier."),
                 ModelInfo("gemini-1.5-pro", "Gemini 1.5 Pro", "Most capable, slower. Free tier.")
             )
         ),
