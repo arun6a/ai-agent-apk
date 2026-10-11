@@ -797,6 +797,44 @@ class MainActivity : AppCompatActivity() {
                 // Call LLM with current conversation state
                 val llmResponse = llmClient.chat(conversation.toString(), systemPrompt)
 
+                // v6.3.1: FALLBACK — if AI returns tool_calls for tools NOT in the dynamic prompt,
+                // auto-expand to full prompt for next call
+                if (iteration == 1 && com.ai.agent.llm.AIProvider.getPromptMode(this) == "dynamic") {
+                    val availableTools = com.ai.agent.tools.ToolExecutor.getAvailableToolNames()
+                    val unknownTools = llmResponse.toolCalls.filter { it.name !in availableTools }
+                    if (unknownTools.isNotEmpty()) {
+                        Log.w("MainActivity", "AI called unknown tools: ${unknownTools.map { it.name }} — expanding to full prompt")
+                        val fullPrompt = com.ai.agent.llm.DynamicPromptBuilder.buildPrompt(this, "")
+                        // Rebuild system prompt with full tools
+                        val fullSystemPrompt = "$fullPrompt\n\n## What I Remember About the User\n${database.getAllMemory().entries.joinToString("\n") { "- ${it.key}: ${it.value}" }}"
+                        // Re-call with full prompt
+                        val retryResponse = llmClient.chat(conversation.toString(), fullSystemPrompt)
+                        // Use retry response instead
+                        val retryResults = toolExecutor.executeTools(retryResponse.toolCalls)
+                        val retrySummary = StringBuilder("Step $iteration (fallback): ${retryResponse.reply}")
+                        retryResults.forEachIndexed { i, result ->
+                            val call = retryResponse.toolCalls[i]
+                            retrySummary.append("\n• ${call.name}(${call.args.entries.joinToString(",") { "${it.key}=${it.value}" }}) → ${if (result.success) "✓" else "✗"}")
+                        }
+                        val callCount = ApiUsageTracker.getTaskCalls()
+                        adapter.removeLastIfEquals("Thinking...")
+                        adapter.addMessage(ChatMessage(
+                            text = "[$iteration/$MAX_ITERATIONS] [API: $callCount calls] $retrySummary",
+                            isUser = false,
+                            status = MessageStatus.THINKING
+                        ))
+                        conversation.append("\n\n[Tool results from step $iteration (fallback)]:")
+                        retryResults.forEachIndexed { i, result ->
+                            val call = retryResponse.toolCalls[i]
+                            conversation.append("Tool: ${call.name}(${call.args.entries.joinToString(",") { "${it.key}=${it.value}" }})\n")
+                            conversation.append("Result: ${result.output}\n\n")
+                        }
+                        conversation.append("\nBased on these results, decide the next step.")
+                        kotlinx.coroutines.delay(300)
+                        continue
+                    }
+                }
+
                 // If no tool calls, the task is complete
                 if (llmResponse.toolCalls.isEmpty()) {
                     finalReply = llmResponse.reply

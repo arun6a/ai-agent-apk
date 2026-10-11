@@ -34,7 +34,13 @@ Complete: {"reply":"Done!","tool_calls":[]}
 5. NEVER announce without executing — "I'll tap X" MUST include tap() in tool_calls
 6. recallSimilar(request) at start. remember("workflow_X","steps") on success.
 7. readScreen is 3-tier: accessibility text → ML Kit OCR (free, offline) → VLM API (last resort)
-8. Multi-step tasks: continue until done or user input needed"""
+8. Multi-step tasks: continue until done or user input needed
+
+## When to use WHAT (CRITICAL):
+- RESEARCH (weather, news, find info) → webSearch + fetchPageText (BACKGROUND, no browser opens, user stays on chat)
+- INTERACTION (order, fill form, click buttons) → browserOpen + browserClickText (VISIBLE browser, user sees)
+- APP CONTROL (play YouTube, send WhatsApp) → searchInApp / launchApp (accessibility)
+- SHORTCUT first → searchInApp(1 call), playSpotify(1 call), openWhatsAppChat(1 call) before manual steps"""
 
     // Tool categories with keywords that trigger inclusion
     private val toolCategories = listOf(
