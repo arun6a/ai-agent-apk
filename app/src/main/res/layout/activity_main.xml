@@ -71,6 +71,15 @@
             android:layout_marginStart="8dp" />
 
         <ImageButton
+            android:id="@+id/browserBtn"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@android:drawable/ic_menu_view"
+            android:background="@drawable/control_button_bg"
+            android:contentDescription="Open browser"
+            android:layout_marginStart="8dp" />
+
+        <ImageButton
             android:id="@+id/hubBtn"
             android:layout_width="32dp"
             android:layout_height="32dp"

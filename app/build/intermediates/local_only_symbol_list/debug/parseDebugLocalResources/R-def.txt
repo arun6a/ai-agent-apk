@@ -54,6 +54,7 @@ id aiMessageText
 id aiStatusBar
 id aiStatusText
 id attachBtn
+id browserBtn
 id btnAddKnowledge
 id btnAddMemory
 id btnBack
@@ -66,6 +67,7 @@ id btnOpenBrowser
 id btnOpenSettings
 id btnRefresh
 id btnShare
+id btnSwitchToChat
 id btnToggleMemoryKnowledge
 id btnWebBack
 id btnWebForward

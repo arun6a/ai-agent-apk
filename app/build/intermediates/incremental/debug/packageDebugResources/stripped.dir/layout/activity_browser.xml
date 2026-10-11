@@ -61,6 +61,16 @@
             android:background="?android:attr/selectableItemBackground"
             android:layout_marginStart="4dp"
             android:contentDescription="Refresh" />
+
+        <!-- v6.2.2: Switch to Chat button -->
+        <ImageButton
+            android:id="@+id/btnSwitchToChat"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@android:drawable/ic_menu_send"
+            android:background="?android:attr/selectableItemBackground"
+            android:layout_marginStart="4dp"
+            android:contentDescription="Switch to Chat" />
     </LinearLayout>
 
     <!-- AI status bar -->

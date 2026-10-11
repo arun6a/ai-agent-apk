@@ -557,6 +557,11 @@ class MainActivity : AppCompatActivity() {
         binding.hubBtn.setOnClickListener {
             startActivity(Intent(this, com.ai.agent.ui.HubActivity::class.java))
         }
+
+        // v6.2.2: Browser button — opens BrowserActivity directly
+        binding.browserBtn.setOnClickListener {
+            startActivity(Intent(this, com.ai.agent.ui.BrowserActivity::class.java))
+        }
         binding.textInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}

@@ -28,6 +28,9 @@ public final class ActivityMainBinding implements ViewBinding {
   public final ImageButton attachBtn;
 
   @NonNull
+  public final ImageButton browserBtn;
+
+  @NonNull
   public final LinearLayout footer;
 
   @NonNull
@@ -64,13 +67,15 @@ public final class ActivityMainBinding implements ViewBinding {
   public final EditText textInput;
 
   private ActivityMainBinding(@NonNull ConstraintLayout rootView, @NonNull ImageButton attachBtn,
-      @NonNull LinearLayout footer, @NonNull ImageButton googleVoiceBtn,
-      @NonNull LinearLayout header, @NonNull ImageButton hubBtn, @NonNull TextView interimText,
+      @NonNull ImageButton browserBtn, @NonNull LinearLayout footer,
+      @NonNull ImageButton googleVoiceBtn, @NonNull LinearLayout header,
+      @NonNull ImageButton hubBtn, @NonNull TextView interimText,
       @NonNull RecyclerView messagesList, @NonNull ImageButton overlayBtn,
       @NonNull ImageButton sendBtn, @NonNull View statusDot, @NonNull TextView statusText,
       @NonNull Button stopSpeakBtn, @NonNull EditText textInput) {
     this.rootView = rootView;
     this.attachBtn = attachBtn;
+    this.browserBtn = browserBtn;
     this.footer = footer;
     this.googleVoiceBtn = googleVoiceBtn;
     this.header = header;
@@ -115,6 +120,12 @@ public final class ActivityMainBinding implements ViewBinding {
       id = R.id.attachBtn;
       ImageButton attachBtn = ViewBindings.findChildViewById(rootView, id);
       if (attachBtn == null) {
+        break missingId;
+      }
+
+      id = R.id.browserBtn;
+      ImageButton browserBtn = ViewBindings.findChildViewById(rootView, id);
+      if (browserBtn == null) {
         break missingId;
       }
 
@@ -190,9 +201,9 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
-      return new ActivityMainBinding((ConstraintLayout) rootView, attachBtn, footer, googleVoiceBtn,
-          header, hubBtn, interimText, messagesList, overlayBtn, sendBtn, statusDot, statusText,
-          stopSpeakBtn, textInput);
+      return new ActivityMainBinding((ConstraintLayout) rootView, attachBtn, browserBtn, footer,
+          googleVoiceBtn, header, hubBtn, interimText, messagesList, overlayBtn, sendBtn, statusDot,
+          statusText, stopSpeakBtn, textInput);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

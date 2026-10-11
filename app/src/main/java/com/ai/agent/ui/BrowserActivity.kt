@@ -103,6 +103,15 @@ class BrowserActivity : AppCompatActivity() {
         // Refresh
         btnRefresh.setOnClickListener { webView.reload() }
 
+        // v6.2.2: Switch to Chat button — launches MainActivity (chat)
+        val btnSwitchToChat: ImageButton = findViewById(R.id.btnSwitchToChat)
+        btnSwitchToChat.setOnClickListener {
+            val intent = Intent(this, com.ai.agent.MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            }
+            startActivity(intent)
+        }
+
         // Browser back/forward
         btnWebBack.setOnClickListener { if (webView.canGoBack()) webView.goBack() }
         btnWebForward.setOnClickListener { if (webView.canGoForward()) webView.goForward() }

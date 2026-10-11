@@ -3288,6 +3288,7 @@ id bounce
 id bounceBoth
 id bounceEnd
 id bounceStart
+id browserBtn
 id btnAddKnowledge
 id btnAddMemory
 id btnBack
@@ -3300,6 +3301,7 @@ id btnOpenBrowser
 id btnOpenSettings
 id btnRefresh
 id btnShare
+id btnSwitchToChat
 id btnToggleMemoryKnowledge
 id btnWebBack
 id btnWebForward

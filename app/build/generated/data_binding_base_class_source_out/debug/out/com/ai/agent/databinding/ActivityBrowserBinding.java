@@ -43,6 +43,9 @@ public final class ActivityBrowserBinding implements ViewBinding {
   public final ImageButton btnShare;
 
   @NonNull
+  public final ImageButton btnSwitchToChat;
+
+  @NonNull
   public final ImageButton btnWebBack;
 
   @NonNull
@@ -63,9 +66,9 @@ public final class ActivityBrowserBinding implements ViewBinding {
   private ActivityBrowserBinding(@NonNull LinearLayout rootView, @NonNull LinearLayout aiStatusBar,
       @NonNull TextView aiStatusText, @NonNull ImageButton btnBack, @NonNull Button btnImDone,
       @NonNull ImageButton btnRefresh, @NonNull ImageButton btnShare,
-      @NonNull ImageButton btnWebBack, @NonNull ImageButton btnWebForward,
-      @NonNull ProgressBar loadingBar, @NonNull ToggleButton modeToggle, @NonNull TextView urlBar,
-      @NonNull WebView webView) {
+      @NonNull ImageButton btnSwitchToChat, @NonNull ImageButton btnWebBack,
+      @NonNull ImageButton btnWebForward, @NonNull ProgressBar loadingBar,
+      @NonNull ToggleButton modeToggle, @NonNull TextView urlBar, @NonNull WebView webView) {
     this.rootView = rootView;
     this.aiStatusBar = aiStatusBar;
     this.aiStatusText = aiStatusText;
@@ -73,6 +76,7 @@ public final class ActivityBrowserBinding implements ViewBinding {
     this.btnImDone = btnImDone;
     this.btnRefresh = btnRefresh;
     this.btnShare = btnShare;
+    this.btnSwitchToChat = btnSwitchToChat;
     this.btnWebBack = btnWebBack;
     this.btnWebForward = btnWebForward;
     this.loadingBar = loadingBar;
@@ -144,6 +148,12 @@ public final class ActivityBrowserBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.btnSwitchToChat;
+      ImageButton btnSwitchToChat = ViewBindings.findChildViewById(rootView, id);
+      if (btnSwitchToChat == null) {
+        break missingId;
+      }
+
       id = R.id.btnWebBack;
       ImageButton btnWebBack = ViewBindings.findChildViewById(rootView, id);
       if (btnWebBack == null) {
@@ -181,8 +191,8 @@ public final class ActivityBrowserBinding implements ViewBinding {
       }
 
       return new ActivityBrowserBinding((LinearLayout) rootView, aiStatusBar, aiStatusText, btnBack,
-          btnImDone, btnRefresh, btnShare, btnWebBack, btnWebForward, loadingBar, modeToggle,
-          urlBar, webView);
+          btnImDone, btnRefresh, btnShare, btnSwitchToChat, btnWebBack, btnWebForward, loadingBar,
+          modeToggle, urlBar, webView);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));
