@@ -176,6 +176,128 @@ class SettingsActivity : AppCompatActivity() {
             recreate()
         }
 
+        // === Prompt Mode (v6.3.0) ===
+        layout.addView(SectionTitle("System Prompt Mode"))
+        val currentPromptMode = com.ai.agent.llm.AIProvider.getPromptMode(this)
+        val promptModeInfo = InfoText(
+            "Current: ${currentPromptMode.uppercase()}\n\n" +
+            "Dynamic: Auto-selects relevant tools per task (saves tokens)\n" +
+            "Smart: Full prompt with all tips/examples (~11K tokens, best for complex tasks)\n" +
+            "Balanced: Trimmed prompt with core tools (~1.5K tokens, good daily use)\n" +
+            "Fast: Minimal prompt with tool names only (~750 tokens, most calls/day)\n" +
+            "Custom: Your edited prompt from storage"
+        )
+        layout.addView(promptModeInfo)
+
+        val promptButtons = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val btnDynamic = Button(this).apply { text = "🤖 Dynamic" }
+        val btnSmart = Button(this).apply { text = "🧠 Smart" }
+        val btnBalanced = Button(this).apply { text = "⚖️ Balanced" }
+        val btnFast = Button(this).apply { text = "⚡ Fast" }
+        val btnCustomPrompt = Button(this).apply { text = "📝 Custom" }
+        promptButtons.addView(btnDynamic)
+        promptButtons.addView(btnSmart)
+        promptButtons.addView(btnBalanced)
+        promptButtons.addView(btnFast)
+        promptButtons.addView(btnCustomPrompt)
+        layout.addView(promptButtons)
+
+        btnDynamic.setOnClickListener {
+            com.ai.agent.llm.AIProvider.setPromptMode(this, "dynamic")
+            Toast.makeText(this, "Prompt mode: Dynamic (auto-selects tools per task)", Toast.LENGTH_SHORT).show()
+            recreate()
+        }
+        btnSmart.setOnClickListener {
+            com.ai.agent.llm.AIProvider.setPromptMode(this, "smart")
+            Toast.makeText(this, "Prompt mode: Smart (~11K tokens, full prompt)", Toast.LENGTH_SHORT).show()
+            recreate()
+        }
+        btnBalanced.setOnClickListener {
+            com.ai.agent.llm.AIProvider.setPromptMode(this, "balanced")
+            Toast.makeText(this, "Prompt mode: Balanced (~1.5K tokens, trimmed)", Toast.LENGTH_SHORT).show()
+            recreate()
+        }
+        btnFast.setOnClickListener {
+            com.ai.agent.llm.AIProvider.setPromptMode(this, "fast")
+            Toast.makeText(this, "Prompt mode: Fast (~750 tokens, minimal)", Toast.LENGTH_SHORT).show()
+            recreate()
+        }
+        btnCustomPrompt.setOnClickListener {
+            com.ai.agent.llm.AIProvider.setPromptMode(this, "custom")
+            // If no custom file exists, copy current prompt to custom file
+            val customFile = java.io.File("/storage/emulated/0/Documents/ai-workspace/system_prompt_custom.txt")
+            if (!customFile.exists()) {
+                val currentMode = com.ai.agent.llm.AIProvider.getPromptMode(this)
+                val sourceFile = when (currentMode) {
+                    "balanced" -> "system_prompt_balanced.txt"
+                    "fast" -> "system_prompt_fast.txt"
+                    else -> "system_prompt_smart.txt"
+                }
+                try {
+                    val prompt = assets.open(sourceFile).bufferedReader().readText()
+                    customFile.parentFile?.mkdirs()
+                    customFile.writeText(prompt)
+                    Toast.makeText(this, "Custom prompt created from $currentMode mode. Edit it in Files.", Toast.LENGTH_LONG).show()
+                } catch (e: Exception) {
+                    Toast.makeText(this, "Error creating custom prompt: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(this, "Custom prompt loaded from storage", Toast.LENGTH_SHORT).show()
+            }
+            recreate()
+        }
+
+        // Edit custom prompt button
+        layout.addView(Button(this).apply {
+            text = "📝 Edit Custom Prompt"
+            setOnClickListener {
+                val customFile = java.io.File("/storage/emulated/0/Documents/ai-workspace/system_prompt_custom.txt")
+                if (customFile.exists()) {
+                    // Open with external editor
+                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                        setDataAndType(android.net.Uri.fromFile(customFile), "text/plain")
+                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    try {
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        // No text editor — show in dialog
+                        val content = customFile.readText()
+                        AlertDialog.Builder(this@SettingsActivity)
+                            .setTitle("Custom Prompt (${content.length / 4} tokens)")
+                            .setMessage(content.take(5000) + if (content.length > 5000) "\n\n[...truncated]" else "")
+                            .setPositiveButton("Close", null)
+                            .show()
+                    }
+                } else {
+                    Toast.makeText(this@SettingsActivity, "No custom prompt yet. Tap 'Custom' to create one.", Toast.LENGTH_LONG).show()
+                }
+            }
+        })
+
+        // Restore original button
+        layout.addView(Button(this).apply {
+            text = "🔄 Restore Original Prompt"
+            setOnClickListener {
+                val customFile = java.io.File("/storage/emulated/0/Documents/ai-workspace/system_prompt_custom.txt")
+                if (customFile.exists()) {
+                    AlertDialog.Builder(this@SettingsActivity)
+                        .setTitle("Restore Original")
+                        .setMessage("Delete custom prompt and revert to dynamic mode?")
+                        .setPositiveButton("Restore") { _, _ ->
+                            customFile.delete()
+                            com.ai.agent.llm.AIProvider.setPromptMode(this@SettingsActivity, "dynamic")
+                            Toast.makeText(this@SettingsActivity, "Restored to dynamic mode", Toast.LENGTH_SHORT).show()
+                            recreate()
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                } else {
+                    Toast.makeText(this@SettingsActivity, "No custom prompt to restore", Toast.LENGTH_SHORT).show()
+                }
+            }
+        })
+
         // === Search Method (v5.1.1) ===
         layout.addView(SectionTitle("Search Method"))
         val currentSearch = com.ai.agent.llm.AIProvider.getSearchMethod(this)

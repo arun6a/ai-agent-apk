@@ -165,14 +165,12 @@ class MainActivity : AppCompatActivity() {
         ))
 
         try {
-            val basePrompt = assets.open("system_prompt.txt").bufferedReader().use { it.readText() }
+            // v6.3.0: Dynamic prompt — analyzes user message + selects relevant tools
+            val basePrompt = com.ai.agent.llm.DynamicPromptBuilder.buildPrompt(this, action)
             val memory = database.getAllMemory()
             val memoryStr = if (memory.isEmpty()) "No memories stored yet."
             else memory.entries.joinToString("\n") { "- ${it.key}: ${it.value}" }
-            // Inject PluginManager (active plugin tools) + SkillManager (available skills)
-            val pluginPrompt = com.ai.agent.llm.PluginManager.getEnabledPluginsPrompt(this)
-            val skillPrompt = com.ai.agent.skills.SkillManager(this).also { it.loadSkills() }.generatePromptSection()
-            val systemPrompt = "$basePrompt$pluginPrompt$skillPrompt\n\n## What I Remember About the User\n$memoryStr"
+            val systemPrompt = "$basePrompt\n\n## What I Remember About the User\n$memoryStr"
 
             val response = llmClient.chat(action, systemPrompt)
             var finalReply = response.reply
@@ -758,7 +756,8 @@ class MainActivity : AppCompatActivity() {
         // Hoisted out of try{} so the catch block can reference it for partial-progress reports.
         var workLog = StringBuilder()
         try {
-            val basePrompt = assets.open("system_prompt.txt").bufferedReader().use { it.readText() }
+            // v6.3.0: Dynamic prompt — analyzes user message + selects relevant tools
+            val basePrompt = com.ai.agent.llm.DynamicPromptBuilder.buildPrompt(this, userMessage)
 
             // Inject memory into system prompt
             val memory = database.getAllMemory()
@@ -767,10 +766,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 memory.entries.joinToString("\n") { "- ${it.key}: ${it.value}" }
             }
-            // Inject PluginManager (active plugin tools) + SkillManager (available skills)
-            val pluginPrompt = com.ai.agent.llm.PluginManager.getEnabledPluginsPrompt(this)
-            val skillPrompt = com.ai.agent.skills.SkillManager(this).also { it.loadSkills() }.generatePromptSection()
-            val systemPrompt = "$basePrompt$pluginPrompt$skillPrompt\n\n## What I Remember About the User\n$memoryStr"
+            val systemPrompt = "$basePrompt\n\n## What I Remember About the User\n$memoryStr"
 
             // Build conversation with recent history (last 6 messages)
             val conversation = StringBuilder()

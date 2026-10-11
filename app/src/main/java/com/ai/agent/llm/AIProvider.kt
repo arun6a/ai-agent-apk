@@ -317,4 +317,21 @@ object AIProvider {
     fun setBrowserMode(context: Context, mode: String) {
         getPrefs(context).edit().putString(KEY_BROWSER_MODE, mode).apply()
     }
+
+    // === Prompt Mode (v6.3.0) ===
+    // "dynamic" → auto-selects relevant tools per task (default, saves tokens)
+    // "smart" → full prompt (all tools + tips + examples, ~11K tokens)
+    // "balanced" → trimmed prompt (core tools + key rules, ~1.5K tokens)
+    // "fast" → minimal prompt (tool names + 8 rules, ~750 tokens)
+    // "custom" → user-edited prompt from storage
+    private const val KEY_PROMPT_MODE = "prompt_mode"
+    val DEFAULT_PROMPT_MODE = "dynamic"
+
+    fun getPromptMode(context: Context): String {
+        return getPrefs(context).getString(KEY_PROMPT_MODE, DEFAULT_PROMPT_MODE) ?: DEFAULT_PROMPT_MODE
+    }
+
+    fun setPromptMode(context: Context, mode: String) {
+        getPrefs(context).edit().putString(KEY_PROMPT_MODE, mode).apply()
+    }
 }
