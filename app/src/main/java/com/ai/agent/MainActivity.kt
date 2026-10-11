@@ -103,6 +103,9 @@ class MainActivity : AppCompatActivity() {
         // Start rule engine directly from Activity (not depending on AgentService)
         startRuleEngine()
 
+        // v6.2.0: Create app folders on first launch
+        createAppFolders()
+
         // v6.0.5: Start mini HTTP server for remote screen control
         com.ai.agent.service.AgentHttpServer.start(this)
 
@@ -627,6 +630,33 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             Log.w("MainActivity", "removeThinkingMessage failed", e)
         }
+    }
+
+    /**
+     * v6.2.0: Create app folders on first launch.
+     * Creates the workspace directory structure for:
+     * - attachments/ (files attached from chat)
+     * - skills/ (user-created skills)
+     * - knowledge/ (exported knowledge files)
+     * - downloads/ (AI-downloaded files)
+     * - screenshots/ (AI-captured screenshots)
+     */
+    private fun createAppFolders() {
+        val basePath = "/storage/emulated/0/Documents/ai-workspace"
+        val folders = listOf("attachments", "skills", "knowledge", "downloads", "screenshots")
+        for (folder in folders) {
+            val dir = java.io.File("$basePath/$folder")
+            if (!dir.exists()) {
+                dir.mkdirs()
+                Log.i("MainActivity", "Created folder: ${dir.absolutePath}")
+            }
+        }
+        // Create .nomedia to prevent media scanning
+        val nomedia = java.io.File(basePath, ".nomedia")
+        if (!nomedia.exists()) {
+            nomedia.createNewFile()
+        }
+        Log.i("MainActivity", "App folders ready at $basePath")
     }
 
     private fun stopAgent() {

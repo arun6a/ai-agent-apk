@@ -66,7 +66,11 @@ class HubActivity : AppCompatActivity() {
             orientation = LinearLayout.HORIZONTAL
             setPadding(0, 0, 0, 16)
         }
-        val sections = listOf("skills" to "📋 Skills", "rules" to "⏰ Rules", "tools" to "🔧 Tools", "plugins" to "🔌 Plugins", "settings" to "⚙️ Settings")
+        val sections = listOf(
+            "skills" to "📋 Skills", "rules" to "⏰ Rules", "tools" to "🔧 Tools",
+            "plugins" to "🔌 Plugins", "memory" to "🧠 Memory", "knowledge" to "📚 Knowledge",
+            "history" to "💬 History", "files" to "📁 Files", "settings" to "⚙️ Settings"
+        )
         for ((id, label) in sections) {
             val btn = Button(this).apply {
                 text = label
@@ -91,6 +95,10 @@ class HubActivity : AppCompatActivity() {
             "rules" -> buildRulesSection()
             "tools" -> buildToolsSection()
             "plugins" -> buildPluginsSection()
+            "memory" -> buildMemorySection()
+            "knowledge" -> buildKnowledgeSection()
+            "history" -> buildHistorySection()
+            "files" -> buildFilesSection()
             "settings" -> buildSettingsSection()
             else -> TextView(this).apply { text = "Unknown section" }
         }
@@ -102,7 +110,7 @@ class HubActivity : AppCompatActivity() {
         try {
             val skillManager = com.ai.agent.skills.SkillManager(this).also { it.loadSkills() }
             val allSkills = skillManager.getSkills()
-            layout.addView(infoText("Loaded ${allSkills.size} skills. Tap to view instructions.\n"))
+            layout.addView(infoText("Loaded ${allSkills.size} skills. Tap to view, long-press to delete.\n"))
 
             for (skill in allSkills) {
                 val btn = Button(this).apply {
@@ -113,6 +121,18 @@ class HubActivity : AppCompatActivity() {
                             .setTitle("Skill: ${skill.name}")
                             .setMessage("Description: ${skill.description}\n\nTriggers: ${skill.triggers.joinToString(", ")}\n\nTools: ${skill.toolsUsed.joinToString(", ")}\n\nInstructions:\n${skill.body}")
                             .setPositiveButton("Close", null)
+                            .setNegativeButton("Delete") { _, _ ->
+                                // v6.2.0: Delete skill
+                                val userSkillFile = java.io.File("/storage/emulated/0/Documents/ai-workspace/skills/${skill.name.replace("-", "_")}.md")
+                                if (userSkillFile.exists()) {
+                                    userSkillFile.delete()
+                                    Toast.makeText(this@HubActivity, "Skill '${skill.name}' deleted!", Toast.LENGTH_SHORT).show()
+                                    layout.removeViewAt(layout.childCount - 1)
+                                    layout.addView(buildSkillsSection())
+                                } else {
+                                    Toast.makeText(this@HubActivity, "Built-in skills cannot be deleted (they're in the APK)", Toast.LENGTH_LONG).show()
+                                }
+                            }
                             .show()
                     }
                 }
@@ -123,6 +143,11 @@ class HubActivity : AppCompatActivity() {
                 text = "➕ Create Skill"
                 setOnClickListener { showCreateSkillDialog(layout) }
             })
+
+            // v6.2.0: Show user-created skills folder info
+            val userSkillsDir = java.io.File("/storage/emulated/0/Documents/ai-workspace/skills")
+            val userSkillCount = userSkillsDir.listFiles { f -> f.extension == "md" }?.size ?: 0
+            layout.addView(infoText("\n📂 User skills folder: ${userSkillsDir.absolutePath}\n   $userSkillCount user-created skills"))
         } catch (e: Exception) {
             layout.addView(infoText("Error: ${e.message}"))
         }
@@ -296,6 +321,186 @@ class HubActivity : AppCompatActivity() {
         val memoryCount = database.getAllMemory().size
         val knowledgeCount = database.getAllKnowledge().size
         layout.addView(infoText("\n🧠 Memory: $memoryCount facts\n📚 Knowledge: $knowledgeCount docs"))
+        return layout
+    }
+
+    // === MEMORY (v6.2.0) ===
+    private fun buildMemorySection(): View {
+        val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        try {
+            val allMemory = database.getAllMemory()
+            if (allMemory.isEmpty()) {
+                layout.addView(infoText("No memories stored yet.\n\nAsk the AI: 'remember my name is Arun'"))
+            } else {
+                layout.addView(infoText("${allMemory.size} memories:\n"))
+                for ((key, value) in allMemory) {
+                    val btn = Button(this).apply {
+                        text = "🔑 $key → $value"
+                        textSize = 10f
+                        setOnClickListener {
+                            AlertDialog.Builder(this@HubActivity)
+                                .setTitle(key)
+                                .setMessage(value)
+                                .setPositiveButton("Close", null)
+                                .setNegativeButton("Forget") { _, _ ->
+                                    database.forgetMemory(key)
+                                    Toast.makeText(this@HubActivity, "Forgot: $key", Toast.LENGTH_SHORT).show()
+                                    layout.removeViewAt(layout.childCount - 1)
+                                    layout.addView(buildMemorySection())
+                                }
+                                .show()
+                        }
+                    }
+                    layout.addView(btn)
+                }
+            }
+            layout.addView(Button(this).apply {
+                text = "🗑️ Clear All Memory"
+                setOnClickListener {
+                    AlertDialog.Builder(this@HubActivity)
+                        .setTitle("Clear All Memory")
+                        .setMessage("Delete ALL memories? This cannot be undone.")
+                        .setPositiveButton("Clear All") { _, _ ->
+                            for ((key, _) in database.getAllMemory()) {
+                                database.forgetMemory(key)
+                            }
+                            Toast.makeText(this@HubActivity, "All memory cleared", Toast.LENGTH_SHORT).show()
+                            layout.removeViewAt(layout.childCount - 1)
+                            layout.addView(buildMemorySection())
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                }
+            })
+        } catch (e: Exception) {
+            layout.addView(infoText("Error: ${e.message}"))
+        }
+        return layout
+    }
+
+    // === KNOWLEDGE (v6.2.0) ===
+    private fun buildKnowledgeSection(): View {
+        val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        try {
+            val allKnowledge = database.getAllKnowledge()
+            if (allKnowledge.isEmpty()) {
+                layout.addView(infoText("No knowledge stored yet.\n\nAsk the AI: 'save this as knowledge: <text>'\nOr attach a document and ask to save it."))
+            } else {
+                layout.addView(infoText("${allKnowledge.size} knowledge documents:\n"))
+                for ((name, content, source) in allKnowledge) {
+                    val btn = Button(this).apply {
+                        text = "📄 $name\n   ${content.take(80)}... ($source)"
+                        textSize = 10f
+                        setOnClickListener {
+                            AlertDialog.Builder(this@HubActivity)
+                                .setTitle(name)
+                                .setMessage("Source: $source\n\nContent:\n$content")
+                                .setPositiveButton("Close", null)
+                                .setNegativeButton("Delete") { _, _ ->
+                                    database.deleteKnowledge(name)
+                                    Toast.makeText(this@HubActivity, "Deleted: $name", Toast.LENGTH_SHORT).show()
+                                    layout.removeViewAt(layout.childCount - 1)
+                                    layout.addView(buildKnowledgeSection())
+                                }
+                                .show()
+                        }
+                    }
+                    layout.addView(btn)
+                }
+            }
+            layout.addView(Button(this).apply {
+                text = "🗑️ Clear All Knowledge"
+                setOnClickListener {
+                    AlertDialog.Builder(this@HubActivity)
+                        .setTitle("Clear All Knowledge")
+                        .setMessage("Delete ALL knowledge documents?")
+                        .setPositiveButton("Clear All") { _, _ ->
+                            for ((name, _, _) in database.getAllKnowledge()) {
+                                database.deleteKnowledge(name)
+                            }
+                            Toast.makeText(this@HubActivity, "All knowledge cleared", Toast.LENGTH_SHORT).show()
+                            layout.removeViewAt(layout.childCount - 1)
+                            layout.addView(buildKnowledgeSection())
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                }
+            })
+        } catch (e: Exception) {
+            layout.addView(infoText("Error: ${e.message}"))
+        }
+        return layout
+    }
+
+    // === HISTORY (v6.2.0) ===
+    private fun buildHistorySection(): View {
+        val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        try {
+            val history = database.getRecentConversations(50)
+            if (history.isEmpty()) {
+                layout.addView(infoText("No chat history yet.\n\nStart chatting with the AI to build history."))
+            } else {
+                layout.addView(infoText("${history.size} recent messages:\n"))
+                for ((role, text) in history) {
+                    val prefix = if (role == "user") "👤" else "🤖"
+                    val tv = TextView(this).apply {
+                        this.text = "$prefix ${text.take(150)}${if (text.length > 150) "..." else ""}"
+                        textSize = 11f
+                        setTextColor(getColor(R.color.text_secondary))
+                        setPadding(8, 8, 8, 8)
+                        setBackgroundResource(R.color.bg_surface)
+                    }
+                    val params = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                    params.setMargins(0, 0, 0, 4)
+                    tv.layoutParams = params
+                    layout.addView(tv)
+                }
+                layout.addView(Button(this).apply {
+                    text = "🗑️ Clear All History"
+                    setOnClickListener {
+                        AlertDialog.Builder(this@HubActivity)
+                            .setTitle("Clear History")
+                            .setMessage("Delete all chat history?")
+                            .setPositiveButton("Clear") { _, _ ->
+                                database.clearConversations()
+                                Toast.makeText(this@HubActivity, "History cleared", Toast.LENGTH_SHORT).show()
+                                layout.removeViewAt(layout.childCount - 1)
+                                layout.addView(buildHistorySection())
+                            }
+                            .setNegativeButton("Cancel", null)
+                            .show()
+                    }
+                })
+            }
+        } catch (e: Exception) {
+            layout.addView(infoText("Error: ${e.message}"))
+        }
+        return layout
+    }
+
+    // === FILES (v6.2.0) ===
+    private fun buildFilesSection(): View {
+        val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val basePath = "/storage/emulated/0/Documents/ai-workspace"
+        val folders = listOf("attachments", "skills", "knowledge", "downloads", "screenshots")
+
+        layout.addView(infoText("App workspace: $basePath\n"))
+        for (folder in folders) {
+            val dir = java.io.File("$basePath/$folder")
+            val files = if (dir.exists()) dir.listFiles() ?: emptyArray() else emptyArray()
+            val totalSize = files.sumOf { it.length() }
+            val sizeKb = totalSize / 1024
+
+            layout.addView(infoText("📁 $folder/ (${files.size} files, ${sizeKb}KB)"))
+            for (file in files.take(10)) {
+                val fileSizeKb = file.length() / 1024
+                layout.addView(infoText("   📄 ${file.name} (${fileSizeKb}KB)"))
+            }
+            if (files.size > 10) {
+                layout.addView(infoText("   ... +${files.size - 10} more"))
+            }
+            layout.addView(infoText(""))
+        }
         return layout
     }
 
