@@ -532,7 +532,7 @@ class HubActivity : AppCompatActivity() {
         layout.addView(infoText("Model: $model"))
         layout.addView(infoText("API Key: ${if (apiKey.isNotEmpty()) "✅ Set (${apiKey.length} chars)" else "❌ Not set"}"))
         layout.addView(infoText("Status: ${if (isConfigured) "✅ Ready" else "❌ Not configured"}\n"))
-        layout.addView(infoText("Available Providers (12):"))
+        layout.addView(infoText("Available Providers (13):"))
         for (p in com.ai.agent.llm.AIProvider.PROVIDERS) {
             val current = if (p.id == provider.id) " ← CURRENT" else ""
             layout.addView(infoText("  • ${p.name}$current (${p.models.size} models)"))
@@ -565,6 +565,7 @@ class HubActivity : AppCompatActivity() {
         layout.addView(infoText("  Gemini: all models support vision"))
         layout.addView(infoText("  OpenAI: gpt-4o, gpt-4-vision"))
         layout.addView(infoText("  Anthropic: claude-3-5-sonnet, claude-3-opus"))
+        layout.addView(infoText("  Z.ai Direct: glm-5v-turbo, glm-4.5v, glm-4.1v"))
         layout.addView(Button(this).apply {
             text = "⚙️ Configure Vision →"
             setOnClickListener { startActivity(Intent(this@HubActivity, AIProviderSettingsActivity::class.java)) }
@@ -581,7 +582,7 @@ class HubActivity : AppCompatActivity() {
             "anthropic" -> listOf("claude-3")
             "mistral" -> listOf("pixtral")
             "together" -> listOf("vision")
-            "zai" -> listOf("glm")
+            "zai", "zai_direct" -> listOf("v", "vision")
             else -> emptyList()
         }
         return keywords.any { model.lowercase().contains(it) }

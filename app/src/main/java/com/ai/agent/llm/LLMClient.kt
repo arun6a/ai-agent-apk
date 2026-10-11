@@ -89,7 +89,7 @@ class LLMClient(private val context: Context) {
                         requestBuilder.header("HTTP-Referer", "https://github.com/arun6a/ai-agent-apk")
                         requestBuilder.header("X-Title", "AI Agent Phone")
                     }
-                    "groq", "together", "openai", "cerebras", "mistral",
+                    "zai_direct", "groq", "together", "openai", "cerebras", "mistral",
                     "deepinfra", "fireworks", "anthropic" -> {
                         // All OpenAI-compatible — Bearer token
                         requestBuilder.header("Authorization", "Bearer $apiKey")
@@ -173,14 +173,14 @@ class LLMClient(private val context: Context) {
         val body = JSONObject().apply {
             put("model", model)
             put("messages", messages)
-            // Z.ai uses "thinking" param, OpenRouter/custom don't need it
-            if (providerId == "zai") {
+            // Z.ai (both proxy and direct) uses "thinking" param
+            if (providerId == "zai" || providerId == "zai_direct") {
                 put("thinking", JSONObject().put("type", "disabled"))
             }
             // For providers that support native function calling, use it.
             // This is MUCH more reliable than asking the LLM to write JSON in the reply.
             // The LLM returns tool_calls as a structured field, not as text.
-            if (providerId in setOf("groq", "openrouter", "together", "custom", "openai", "cerebras", "mistral", "deepinfra", "fireworks")) {
+            if (providerId in setOf("groq", "openrouter", "together", "custom", "openai", "cerebras", "mistral", "deepinfra", "fireworks", "zai_direct")) {
                 put("tools", buildToolsArray())
                 put("tool_choice", "auto")
                 // Some providers (Groq, OpenRouter) support response_format for stricter output

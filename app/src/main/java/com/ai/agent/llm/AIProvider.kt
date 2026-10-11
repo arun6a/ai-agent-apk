@@ -176,10 +176,41 @@ object AIProvider {
             )
         ),
         ProviderInfo(
+            id = "zai_direct",
+            name = "Z.ai Direct (Official API)",
+            description = "Calls Z.ai's official API DIRECTLY from your phone — no sandbox needed. " +
+                    "Works anywhere, anytime (even when sandbox is offline). OpenAI-compatible. " +
+                    "Get an API key at z.ai (API Keys section). Supports native function calling. " +
+                    "Many GLM models available including the new GLM-5.3 flagship and GLM-5V vision.",
+            defaultEndpoint = "https://api.z.ai/api/paas/v4/chat/completions",
+            needsApiKey = true,
+            models = listOf(
+                // === GLM-5.x series (newest, smartest) ===
+                ModelInfo("glm-5.3", "GLM-5.3 (Flagship, Newest)", "Z.ai's NEW flagship. Best reasoning, coding, agentic. Most capable."),
+                ModelInfo("glm-5.3-flash", "GLM-5.3 Flash (Fast)", "Fast version of 5.3. Good balance of speed + capability."),
+                ModelInfo("glm-5.3-flashx", "GLM-5.3 FlashX (Fastest)", "Ultra-fast variant. Best for simple tasks."),
+                ModelInfo("glm-5.2", "GLM-5.2", "Previous flagship. Still very capable."),
+                ModelInfo("glm-5.1", "GLM-5.1", "Solid all-rounder."),
+                ModelInfo("glm-5", "GLM-5", "First GLM-5. Stable, capable."),
+                // === GLM-4.x series (mature, stable) ===
+                ModelInfo("glm-4.7", "GLM-4.7", "Latest 4.x. Reliable, fast."),
+                ModelInfo("glm-4.6", "GLM-4.6 (Battle-tested)", "Proven flagship. Most tested, stable. Supports tools."),
+                ModelInfo("glm-4.5", "GLM-4.5", "Capable, balanced."),
+                ModelInfo("glm-4.5-air", "GLM-4.5 Air (Light)", "Lightweight variant. Fast."),
+                ModelInfo("glm-4.5-flash", "GLM-4.5 Flash (Fast)", "Fast, cheap. Good for simple tasks."),
+                ModelInfo("glm-4.5-x", "GLM-4.5 X", "Extended context variant."),
+                // === Vision (VLM) ===
+                ModelInfo("glm-5v-turbo", "GLM-5V Turbo (Vision!)", "NEW vision model. Analyze screenshots, UI. Fast."),
+                ModelInfo("glm-4.5v", "GLM-4.5V (Vision)", "Vision-capable. Can analyze screenshots."),
+                ModelInfo("glm-4.1v", "GLM-4.1V (Vision, Legacy)", "Older vision model. May be deprecated.")
+            )
+        ),
+        ProviderInfo(
             id = "zai",
             name = "Z.ai Proxy (Sandbox)",
             description = "Uses the sandbox proxy. No API key needed, but the sandbox " +
-                    "dev server must be running. GLM-4.6 model. 300 requests/day.",
+                    "dev server must be running. GLM-4.6 model. 300 requests/day. " +
+                    "Only works while sandbox is active.",
             defaultEndpoint = "https://preview-chat-1855dd56-e3a8-4ac4-a21c-824fbab8e552.space-z.ai/api/llm/proxy",
             needsApiKey = false,
             models = listOf(
