@@ -156,7 +156,9 @@ class AgentService : Service() {
                 }
             }
             else -> {
-                showOverlay()
+                // v6.1.4: Don't show overlay from service — MainActivity handles overlay
+                // This prevents duplicate floating buttons
+                Log.i(TAG, "Service started — overlay handled by MainActivity")
             }
         }
         return START_STICKY

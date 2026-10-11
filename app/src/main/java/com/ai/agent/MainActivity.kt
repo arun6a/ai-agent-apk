@@ -266,7 +266,8 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // Start the foreground service
+        // Start the foreground service (for rules + background tasks)
+        // v6.1.4: Service no longer creates overlay — MainActivity controls it
         try {
             val intent = Intent(this, AgentService::class.java).apply {
                 action = AgentService.ACTION_START
@@ -276,7 +277,15 @@ class MainActivity : AppCompatActivity() {
             } else {
                 startService(intent)
             }
-            showToast("AI Agent service started — floating button should appear")
+
+            // v6.1.4: Auto-show overlay IF not already visible (single instance)
+            if (overlayManager?.isVisible() != true) {
+                if (overlayManager == null) {
+                    overlayManager = OverlayManager(this)
+                }
+                overlayManager?.show()
+                Log.i("MainActivity", "Overlay shown (single instance)")
+            }
         } catch (e: Exception) {
             Log.e("MainActivity", "Failed to start service", e)
             showToast("Could not start background service: ${e.message}")
@@ -503,7 +512,7 @@ class MainActivity : AppCompatActivity() {
         }
         binding.stopSpeakBtn.setOnClickListener { voiceManager.stopSpeaking() }
 
-        // Overlay toggle button — directly shows/hides the floating button
+        // v6.1.4: Overlay toggle button — SINGLE instance, toggle on/off
         binding.overlayBtn.setOnClickListener {
             if (!Settings.canDrawOverlays(this)) {
                 AlertDialog.Builder(this)
@@ -523,7 +532,7 @@ class MainActivity : AppCompatActivity() {
                 overlayManager?.hide()
                 showToast("Floating button hidden")
             } else {
-                // Show overlay directly from Activity
+                // Show overlay — reuse existing instance, don't create new one
                 try {
                     if (overlayManager == null) {
                         overlayManager = OverlayManager(this)
@@ -626,10 +635,20 @@ class MainActivity : AppCompatActivity() {
         agentJob = null
         adapter.updateLastMessage("(⏹ Task stopped by user)")
         voiceManager.stopSpeaking()
-        // Force update the button back to send mode
+
+        // v6.1.4: Force reset the send button IMMEDIATELY (fixes "stays red" bug)
         binding.sendBtn.setImageResource(R.drawable.ic_send)
         binding.sendBtn.background = ContextCompat.getDrawable(this, R.drawable.send_button_bg)
         binding.sendBtn.isEnabled = binding.textInput.text.toString().trim().isNotEmpty()
+
+        // v6.1.4: Post a delayed re-check to ensure button doesn't stay red
+        binding.sendBtn.postDelayed({
+            if (agentJob?.isActive != true) {
+                binding.sendBtn.setImageResource(R.drawable.ic_send)
+                binding.sendBtn.background = ContextCompat.getDrawable(this, R.drawable.send_button_bg)
+                binding.sendBtn.isEnabled = binding.textInput.text.toString().trim().isNotEmpty()
+            }
+        }, 500)
     }
 
     /**

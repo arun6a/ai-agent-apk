@@ -120,19 +120,22 @@ class BrowserActivity : AppCompatActivity() {
         // Mode toggle: AI ↔ User
         modeToggle.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
-                // AI mode
-                showAIStatus("🤖 AI is working...")
+                // AI mode — user finished, AI should continue
+                showAIStatus("🤖 AI is continuing...")
+                onUserFinished()
             } else {
-                // User mode
+                // User mode — user takes control
                 hideAIStatus()
-                Toast.makeText(this, "👤 User mode — you control the browser", Toast.LENGTH_SHORT).show()
+                btnImDone.visibility = View.VISIBLE
+                Toast.makeText(this, "👤 User mode — you control the browser. Tap 'I'm Done' when finished.", Toast.LENGTH_LONG).show()
             }
         }
 
-        // "I'm done" button → switch back to AI mode
+        // "I'm done" button → switch back to AI mode + notify agent
         btnImDone.setOnClickListener {
             modeToggle.isChecked = true  // back to AI mode
             btnImDone.visibility = View.GONE
+            // onUserFinished() will be called by the toggle listener above
         }
 
         // Load initial URL if provided
@@ -279,6 +282,38 @@ class BrowserActivity : AppCompatActivity() {
      * Check if AI mode is active.
      */
     fun isAIMode(): Boolean = modeToggle.isChecked
+
+    /**
+     * v6.1.4: Called when user switches back to AI mode (toggles or taps "I'm Done").
+     * Reads current browser state + broadcasts a "continue" intent so the agent loop
+     * knows the user finished and it can continue the task.
+     */
+    private fun onUserFinished() {
+        Log.i(TAG, "User finished — switching to AI mode, reading page state")
+
+        // Read current page state
+        val url = webView.url ?: ""
+        val title = webView.title ?: ""
+        Log.i(TAG, "Current page: $title ($url)")
+
+        // Broadcast "user finished" so the agent loop continues
+        val intent = Intent("com.ai.agent.USER_FINISHED_BROWSER").apply {
+            putExtra("url", url)
+            putExtra("title", title)
+            setPackage("com.ai.agent")
+        }
+        sendBroadcast(intent)
+
+        // Also auto-read the page structure so the AI has fresh data
+        try {
+            val structured = com.ai.agent.browser.BrowserController.readStructured(this)
+            Log.i(TAG, "Page structure read: ${structured.length} chars")
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not read page structure: ${e.message}")
+        }
+
+        Toast.makeText(this, "🤖 AI continuing — reading page...", Toast.LENGTH_SHORT).show()
+    }
 
     override fun onDestroy() {
         super.onDestroy()
