@@ -1,177 +1,213 @@
-# Future Plans — From Sandbox-1 (Original AI)
+# Future Plans — Updated v6.3.2
 
-**Date**: 2026-10-08
-**Author**: Sandbox-1 (original AI, built v1.0-v3.4.0)
-**For**: Sandbox-2 (current AI) and future contributors
+**Date**: 2026-10-11
+**Updated by**: Sandbox-2
+**Previous version**: FUTURE_PLANS.md (by Sandbox-1, v4.0.1)
 
-## Current State (v4.0.1)
+---
 
-- 100+ tools (screen, apps, browser, files, contacts, rules, vision)
-- 6 AI providers (OpenRouter, Groq, Together, Gemini, Z.ai, Custom)
-- Hybrid browser agent (WebView + Chrome fallback)
-- Proactive rules (16 trigger types)
-- API usage monitoring
-- 113+ total tools after v4.0.0 browser tools
+## What's Been Accomplished (v4.0 → v6.3.2)
 
-## User's Vision: Skills & Plugins System
+Since the original FUTURE_PLANS.md, we've shipped:
 
-The user and I discussed that the future direction should be **Skills and Plugins**, NOT a developer platform. Here's what that means:
+- ✅ Skills system (20 built-in + user-created via chat)
+- ✅ Plugin system (10 plugins)
+- ✅ Token optimization (dynamic prompt, 5 modes)
+- ✅ 36 trigger types (was 16)
+- ✅ 12 AI providers (was 6)
+- ✅ File attachments + knowledge store
+- ✅ Hub activity (13 sections)
+- ✅ Strategy switching + always learn
+- ✅ HTTP server for remote control
+- ✅ Browser ↔ Chat quick switch
+- ✅ Google Voice input
+- ✅ Overlay fix (no duplicates)
+- ✅ App folders on install
 
-### Skills System (Modular Capabilities)
+---
 
-Instead of 100+ hardcoded tools, use modular skills:
+## Updated Roadmap
 
+### Phase 1: Stabilization (v6.4.0) — NEXT
+
+| Feature | Priority | Status |
+|---|---|---|
+| Screenshot MIUI fix (PixelCopy/MediaProjection) | 🔴 Critical | Not started |
+| Timeout system (30s/step, 3min/task) | 🔴 High | Not started |
+| Ask user for help (after 3 failures) | 🟡 Medium | Not started |
+| Browser stays foreground (all steps visible) | 🟡 Medium | Not started |
+| Stop button polish | 🟢 Low | Partially done |
+| Empty catch blocks logging | 🟢 Low | Not started |
+
+### Phase 2: Developer AI Agent (v7.0.0)
+
+**Vision**: The AI becomes a coding assistant that can write + deploy code on the device.
+
+| Feature | Description |
+|---|---|
+| **Code execution** | AI writes Python/JavaScript code + runs it on-device (via Termux or embedded interpreter) |
+| **Code generation** | "Write a script that checks my battery every hour and logs it" → AI writes + saves + creates a rule |
+| **APK building** | AI can modify its own code, rebuild APK, and install (meta-programming) |
+| **Termux integration** | Full Linux environment — Python, Node.js, Git, etc. |
+| **GitHub integration** | AI can push code, create PRs, manage issues from the phone |
+| **Debug mode** | AI reads its own logcat, identifies bugs, suggests fixes |
+| **Skill compiler** | AI writes new skills in natural language → compiles to .md files |
+| **Plugin builder** | AI creates new plugin JSON files based on user needs |
+| **Auto-testing** | AI tests its own tools + reports failures |
+
+**Example flows:**
 ```
-/skills/
-├── whatsapp/
-│   ├── skill.json      # name, description, tools
-│   ├── tools.kt         # implementation
-│   └── prompt.txt       # how AI should use it
-├── shopping/
-│   ├── skill.json
-│   ├── tools.kt
-│   └── prompt.txt
-├── smart_home/
-│   └── ...
-```
+User: "Write a Python script that checks my battery every hour and saves to a file"
+AI: 
+  1. Writes Python script to /storage/.../scripts/battery_log.py
+  2. Creates a rule: every 1 hour → runShellCommand("python battery_log.py")
+  3. Reply: "Script created + scheduled. It will log battery every hour."
 
-### Benefits
+User: "Check your own logs for any errors"
+AI:
+  1. runShellCommand("logcat -d *:E -s AgentHttpServer:V MainActivity:V")
+  2. Analyzes errors
+  3. Reply: "Found 3 errors. 1. Screenshot fails on MIUI. 2. Empty catch in WiFiReceiver. 3. ..."
 
-| Feature | Hardcoded Tools (Current) | Skills System (Future) |
-|---------|--------------------------|----------------------|
-| Add new tool | Rebuild APK | Drop in a file |
-| Remove unused | Can't | Uninstall skill |
-| Share with others | Fork repo | Share skill file |
-| Update | Full APK update | Replace one file |
-| Token usage | All tools in prompt (4K tokens) | Only active skills (1.5K tokens) |
-
-### Skill Format (Suggested)
-
-```json
-{
-  "name": "WhatsApp",
-  "description": "Send messages, read chats, auto-reply",
-  "version": "1.0",
-  "tools": ["openChat", "sendMessage", "readMessages", "autoReply"],
-  "permissions": ["contacts", "notifications"],
-  "prompt": "Use openChat(phone) to open a chat, sendMessage(phone, msg) to send..."
-}
-```
-
-### Dynamic Prompt Loading
-
-```
-Base prompt (1K tokens): "You are a phone AI agent with core tools: [30 tools]"
-+ Active skill (500 tokens): "## WhatsApp: openChat(phone), sendMessage(phone, msg)"
-+ Active skill (500 tokens): "## Shopping: checkPrice(product, store)"
-= Total: 2K tokens (50% less than current 4K!)
-```
-
-## Priority Roadmap (My Recommendation)
-
-### Phase 1: Token Optimization (Immediate — Biggest Win)
-- **System prompt**: 4K → 1.5K tokens (trim verbose examples)
-- **Screen output**: 3K chars → 500 chars (summarized, not raw)
-- **Smart verification**: Skip readScreen when action clearly succeeded
-- **Impact**: 3x more tasks per day on any provider
-
-### Phase 2: Skills System (Next Major Version)
-- Extract tools into skill files (JSON + Kotlin)
-- Dynamic prompt loading (only active skills)
-- In-app skill browser (install/uninstall)
-- Start with: WhatsApp, Shopping, Email, Smart Home
-
-### Phase 3: Vision via Groq (This Week)
-- Groq has `llama-3.2-11b-vision` (free, fast)
-- Add as vision provider in AIProvider.kt
-- No more Z.ai dependency for screenshots
-- Vision becomes unlimited (14,400/day)
-
-### Phase 4: Natural Language Rules (Next Sprint)
-- Instead of JSON: `createRule(name, triggerType, ...)`
-- User says: "Remind me to call Mom every Sunday at 6pm"
-- AI parses and creates rule automatically
-- No technical knowledge needed
-
-### Phase 5: Workflow Recorder (Future)
-- User does something manually once
-- App records: "Opened YouTube → searched cats → played first video"
-- Saves as reusable workflow
-- Next time: "Play cats on YouTube" → replays (1 call instead of 7)
-
-### Phase 6: Telegram Bot (Future)
-- Control phone from Telegram (any device)
-- Send: "Open YouTube" from laptop → phone does it
-- Receive: "Task done" notification
-- Remote control from anywhere
-
-## Architecture Vision
-
-```
-┌─────────────────────────────────┐
-│         User Input              │
-│  (Voice, Text, Telegram, Web)   │
-└──────────────┬──────────────────┘
-               │
-┌──────────────▼──────────────────┐
-│       AI Router (Smart)         │
-│  - Simple → Local LLM (tablet)  │
-│  - Complex → Cloud (Groq)       │
-│  - Vision → Groq Vision          │
-└──────────────┬──────────────────┘
-               │
-┌──────────────▼──────────────────┐
-│      Skill Manager              │
-│  - Loads active skills          │
-│  - Builds dynamic prompt        │
-│  - Routes to skill tools        │
-└──────────────┬──────────────────┘
-               │
-┌──────────────▼──────────────────┐
-│      Tool Executor              │
-│  - Core tools (30)              │
-│  - Skill tools (dynamic)        │
-└──────────────┬──────────────────┘
-               │
-┌──────────────▼──────────────────┐
-│      Memory & Learning          │
-│  - SQLite: conversations        │
-│  - Pattern detection            │
-│  - Workflow recorder            │
-└─────────────────────────────────┘
+User: "Create a new skill for checking train schedules"
+AI:
+  1. createSkill("train-schedule", "Check train schedules", "train|irctc|railway", "1. webSearch...")
+  2. Reply: "Skill 'train-schedule' created!"
 ```
 
-## Key Insights From Our Journey
+### Phase 3: Image & Video Editing (v7.5.0)
 
-1. **Cloud AI limits are real** — 300/day (Z.ai), 500K tokens/day (Groq), 50/day (OpenRouter)
-2. **Token optimization > more API keys** — Reducing tokens per task is the real solution
-3. **Local LLM failed** — Termux/Node.js issues on tablet, but concept is sound
-4. **Tablet is capable** — 11.7GB RAM, 8 cores, arm64 — perfect for local LLM when Termux works
-5. **Batching works** — Read-only tools batched, actions one-per-call (v3.3.2)
-6. **Activity tools are powerful** — v3.4.0 deep links save 86% API calls vs accessibility taps
+**Vision**: AI can edit photos + videos on-device.
 
-## What NOT to Do (From Experience)
+| Feature | Description |
+|---|---|
+| **Image editing** | Crop, resize, rotate, filters, text overlay — via on-device libraries |
+| **Image generation** | AI generates images (Stable Diffusion on-device, or cloud API) |
+| **Video editing** | Trim, merge, add music, subtitles, transitions |
+| **Screenshot annotation** | AI captures screenshot + annotates (arrows, highlights, text) |
+| **Photo enhancement** | Auto-enhance brightness, contrast, noise reduction |
+| **Batch processing** | "Resize all photos in this folder to 1080p" |
+| **Meme generator** | AI creates memes from templates + user text |
+| **Collage maker** | AI combines multiple photos into a collage |
+| **QR code generator** | Generate QR codes from text/URLs |
+| **Barcode scanner** | Scan barcodes + look up products |
 
-1. ❌ Don't add local LLM via llama.cpp (failed, use Termux+llama-server if trying again)
-2. ❌ Don't use Pollinations AI (format issues, 402 errors)
-3. ❌ Don't batch action tools (causes "typing into own chat" bug)
-4. ❌ Don't commit .env or API keys (GitHub blocks it)
-5. ❌ Don't add web files (chat.html, agent.ts) — replaced by APK
+**Example flows:**
+```
+User: [attaches photo] "Crop this to square and add a filter"
+AI:
+  1. readAttachment("photo.jpg")
+  2. runShellCommand("ffmpeg -i photo.jpg -vf crop=1080:1080:0:0,scale=1080:1080 photo_square.jpg")
+  3. Reply: "Done! Cropped to 1080x1080. Saved as photo_square.jpg"
 
-## Communication
+User: "Generate an image of a sunset over mountains"
+AI:
+  1. Calls image generation API (or on-device Stable Diffusion)
+  2. Saves to /storage/.../attachments/sunset_mountains.png
+  3. Reply: "Generated sunset image! Saved to attachments."
 
-- **GitHub commits** are our communication channel (sandbox-2 polls GitHub)
-- **AI bridge** at `/api/ai-chat` doesn't work reliably between sandboxes
-- If you need me, commit a file called `PING_S1.md` and I'll respond
+User: "Make a meme with this photo and text 'When the code works'"
+AI:
+  1. readAttachment("photo.jpg")
+  2. Adds text overlay at top + bottom
+  3. Saves as meme.jpg
+  4. Reply: "Meme created! Want me to share it?"
+```
 
-## Final Thoughts
+### Phase 4: Video Generation (v8.0.0)
 
-The project is in excellent shape. v4.0.1 has:
-- Solid foundation (100+ tools, 6 providers)
-- Hybrid browser agent
-- Proactive rules
-- API monitoring
+**Vision**: AI generates short videos.
 
-The skills system is the natural next step — it solves token bloat, enables customization, and allows community contributions. Start with token optimization (Phase 1), then build the skills architecture (Phase 2).
+| Feature | Description |
+|---|---|
+| **Text-to-video** | "Create a 10-second video of waves on a beach" → AI generates via API |
+| **Photo-to-video** | Animate a static photo (ken burns effect, zoom, pan) |
+| **Slideshow video** | Create slideshow from photos + music |
+| **GIF maker** | Create animated GIFs from video clips |
+| **Screen recording** | Record screen + narrate (AI speaks while recording) |
+| **Video transcription** | Transcribe video audio to text |
+| **Video translation** | Translate video subtitles to another language |
+| **Video compression** | Reduce video file size without quality loss |
+| **Video format conversion** | Convert MKV→MP4, WEBM→MP4, etc. |
 
-Good luck! 🚀
+### Phase 5: Advanced AI (v9.0.0)
+
+| Feature | Description |
+|---|---|
+| **Anthropic prompt caching** | 90% token savings |
+| **Multi-model routing** | Groq for simple, Claude for complex reasoning |
+| **Local LLM** | On-device Llama 3.2 for offline tasks |
+| **Streaming responses** | AI replies stream in real-time |
+| **Voice conversation** | Continuous voice mode |
+| **Multi-turn context** | Full conversation memory (not just last 2 messages) |
+| **Proactive AI** | AI suggests actions before user asks |
+| **Context awareness** | AI knows location, time, calendar, recent apps |
+
+### Phase 6: UI/UX Polish (v7.0.0 — parallel with Developer Agent)
+
+| Feature | Description |
+|---|---|
+| Proper XML layouts (replace programmatic UI) | |
+| Bottom navigation (5 tabs) | |
+| Status orb (animated agent state) | |
+| Live status card (per-step progress) | |
+| Suggestion chips | |
+| Onboarding wizard | |
+| Markdown rendering | |
+| Dark/Light theme | |
+
+### Phase 7: Ecosystem (v10.0.0)
+
+| Feature | Description |
+|---|---|
+| Telegram bot (remote control via Telegram) | |
+| Web dashboard (browser-based control panel) | |
+| API server (other apps call AI Agent) | |
+| Tasker integration | |
+| Smart home control (IoT devices) | |
+| Auto-pilot mode (AI monitors + acts autonomously) | |
+| Skill marketplace (share + download skills) | |
+| Plugin marketplace (download new tool plugins) | |
+| Workflow recorder (record actions → create skill) | |
+| Multi-device sync (sync memory/rules across phones) | |
+
+---
+
+## Old Plans vs New Plans
+
+| Old Plan (Sandbox-1) | Status | Updated Plan |
+|---|---|---|
+| Token optimization (4K→1.5K) | ✅ DONE | Dynamic prompt (11K→750 tokens in Fast mode) |
+| Skills system (JSON + Kotlin) | ✅ DONE | 20 built-in skills + user-created via chat |
+| Plugin system | ✅ DONE | 10 plugins |
+| Marketplace | 🔄 Future | Skill + Plugin marketplace (v10.0.0) |
+| Workflow recorder | 🔄 Future | Record actions → create skill (v10.0.0) |
+| Telegram bot | 🔄 Future | Remote control via Telegram (v10.0.0) |
+| Developer platform | ❌ Changed | Not a platform — it's a personal assistant that CAN code (v7.0.0) |
+
+---
+
+## What the User Wants Next?
+
+Based on our conversations:
+
+1. **Screenshot MIUI fix** — the #1 remaining bug
+2. **UI polish** — proper layouts, not programmatic
+3. **Developer agent** — AI can write + run code
+4. **Image/video editing** — on-device media processing
+5. **Image/video generation** — AI creates visual content
+
+---
+
+## Priority Order (My Recommendation)
+
+```
+v6.4.0 — Bug fixes (screenshot, timeout, browser foreground)
+v7.0.0 — Developer AI Agent + UI polish (parallel)
+v7.5.0 — Image editing + generation
+v8.0.0 — Video editing + generation + streaming AI
+v9.0.0 — Advanced AI (caching, multi-model, local LLM)
+v10.0.0 — Ecosystem (Telegram, web dashboard, marketplace)
+```
+
+— Sandbox-2
