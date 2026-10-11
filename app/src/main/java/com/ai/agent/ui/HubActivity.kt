@@ -69,7 +69,9 @@ class HubActivity : AppCompatActivity() {
         val sections = listOf(
             "skills" to "📋 Skills", "rules" to "⏰ Rules", "tools" to "🔧 Tools",
             "plugins" to "🔌 Plugins", "memory" to "🧠 Memory", "knowledge" to "📚 Knowledge",
-            "history" to "💬 History", "files" to "📁 Files", "settings" to "⚙️ Settings"
+            "history" to "💬 History", "files" to "📁 Files",
+            "llm" to "🤖 LLM", "vision" to "👁 Vision", "audio" to "🎙 Audio",
+            "permissions" to "🔐 Permissions", "settings" to "⚙️ Settings"
         )
         for ((id, label) in sections) {
             val btn = Button(this).apply {
@@ -99,6 +101,10 @@ class HubActivity : AppCompatActivity() {
             "knowledge" -> buildKnowledgeSection()
             "history" -> buildHistorySection()
             "files" -> buildFilesSection()
+            "llm" -> buildLLMSection()
+            "vision" -> buildVisionSection()
+            "audio" -> buildAudioSection()
+            "permissions" -> buildPermissionsSection()
             "settings" -> buildSettingsSection()
             else -> TextView(this).apply { text = "Unknown section" }
         }
@@ -511,5 +517,159 @@ class HubActivity : AppCompatActivity() {
             setTextColor(getColor(R.color.text_secondary))
             setPadding(8, 8, 8, 8)
         }
+    }
+
+    // === LLM (v6.2.1) ===
+    private fun buildLLMSection(): View {
+        val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val provider = com.ai.agent.llm.AIProvider.getCurrentProvider(this)
+        val model = com.ai.agent.llm.AIProvider.getModel(this)
+        val apiKey = com.ai.agent.llm.AIProvider.getApiKey(this)
+        val isConfigured = com.ai.agent.llm.AIProvider.isConfigured(this)
+
+        layout.addView(infoText("🤖 LLM Provider Settings\n"))
+        layout.addView(infoText("Current Provider: ${provider.name}"))
+        layout.addView(infoText("Model: $model"))
+        layout.addView(infoText("API Key: ${if (apiKey.isNotEmpty()) "✅ Set (${apiKey.length} chars)" else "❌ Not set"}"))
+        layout.addView(infoText("Status: ${if (isConfigured) "✅ Ready" else "❌ Not configured"}\n"))
+        layout.addView(infoText("Available Providers (12):"))
+        for (p in com.ai.agent.llm.AIProvider.PROVIDERS) {
+            val current = if (p.id == provider.id) " ← CURRENT" else ""
+            layout.addView(infoText("  • ${p.name}$current (${p.models.size} models)"))
+        }
+        layout.addView(Button(this).apply {
+            text = "⚙️ Configure LLM →"
+            setOnClickListener { startActivity(Intent(this@HubActivity, AIProviderSettingsActivity::class.java)) }
+        })
+        return layout
+    }
+
+    // === VISION (v6.2.1) ===
+    private fun buildVisionSection(): View {
+        val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val provider = com.ai.agent.llm.AIProvider.getCurrentProvider(this)
+        val model = com.ai.agent.llm.AIProvider.getModel(this)
+
+        layout.addView(infoText("👁 Vision / VLM Settings\n"))
+        layout.addView(infoText("Vision tools: analyzeScreen, findElement, browserScreenshot"))
+        layout.addView(infoText("Used when accessibility can't read (images, canvas, icons)\n"))
+        layout.addView(infoText("Current Model: $model"))
+        layout.addView(infoText("Vision-capable: ${if (isVisionCapable(provider.id, model)) "✅ Yes" else "❌ No (uses sandbox proxy)"}\n"))
+        layout.addView(infoText("Fallback chain:"))
+        layout.addView(infoText("  Tier 1: Accessibility text (free, instant)"))
+        layout.addView(infoText("  Tier 2: ML Kit OCR (free, offline)"))
+        layout.addView(infoText("  Tier 3: VLM API (1 call, 2-5s)\n"))
+        layout.addView(infoText("Vision models:"))
+        layout.addView(infoText("  Groq: llama-3.2-11b/90b-vision-preview"))
+        layout.addView(infoText("  OpenRouter: gemma-4-31b, nemotron-omni"))
+        layout.addView(infoText("  Gemini: all models support vision"))
+        layout.addView(infoText("  OpenAI: gpt-4o, gpt-4-vision"))
+        layout.addView(infoText("  Anthropic: claude-3-5-sonnet, claude-3-opus"))
+        layout.addView(Button(this).apply {
+            text = "⚙️ Configure Vision →"
+            setOnClickListener { startActivity(Intent(this@HubActivity, AIProviderSettingsActivity::class.java)) }
+        })
+        return layout
+    }
+
+    private fun isVisionCapable(providerId: String, model: String): Boolean {
+        val keywords = when (providerId) {
+            "groq" -> listOf("vision", "11b-vision", "90b-vision")
+            "openrouter" -> listOf("gemma", "vision", "omni")
+            "gemini" -> listOf("gemini")
+            "openai" -> listOf("gpt-4o", "gpt-4-vision", "o1")
+            "anthropic" -> listOf("claude-3")
+            "mistral" -> listOf("pixtral")
+            "together" -> listOf("vision")
+            "zai" -> listOf("glm")
+            else -> emptyList()
+        }
+        return keywords.any { model.lowercase().contains(it) }
+    }
+
+    // === AUDIO (v6.2.1) ===
+    private fun buildAudioSection(): View {
+        val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        layout.addView(infoText("🎙 Audio Settings\n"))
+        layout.addView(infoText("Current Setup:"))
+        layout.addView(infoText("  Voice Input: Google Voice Intent"))
+        layout.addView(infoText("  Text-to-Speech: Android TTS Engine"))
+        layout.addView(infoText("  Language: en-US"))
+        layout.addView(infoText("  Audio Permission: ${if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) "✅" else "❌"}\n"))
+        layout.addView(infoText("🚧 Coming Soon:"))
+        layout.addView(infoText("  • Whisper STT — high-accuracy recognition"))
+        layout.addView(infoText("  • ElevenLabs TTS — voice cloning"))
+        layout.addView(infoText("  • Audio recording tool"))
+        layout.addView(infoText("  • Audio transcription"))
+        layout.addView(infoText("  • Music identification\n"))
+        return layout
+    }
+
+    // === PERMISSIONS (v6.2.1) ===
+    private fun buildPermissionsSection(): View {
+        val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        layout.addView(infoText("🔐 All Permissions Status\n"))
+
+        val permissions = listOf(
+            android.Manifest.permission.RECORD_AUDIO to "🎙 Audio Recording",
+            android.Manifest.permission.CAMERA to "📷 Camera",
+            android.Manifest.permission.READ_CONTACTS to "👥 Read Contacts",
+            android.Manifest.permission.CALL_PHONE to "📞 Make Calls",
+            android.Manifest.permission.SEND_SMS to "💬 Send SMS",
+            android.Manifest.permission.READ_SMS to "📬 Read SMS",
+            android.Manifest.permission.READ_CALENDAR to "📅 Read Calendar",
+            android.Manifest.permission.WRITE_CALENDAR to "📅 Write Calendar",
+            android.Manifest.permission.ACCESS_FINE_LOCATION to "📍 Fine Location",
+            android.Manifest.permission.ACCESS_COARSE_LOCATION to "📍 Coarse Location",
+            android.Manifest.permission.READ_CALL_LOG to "📞 Read Call Log",
+            android.Manifest.permission.READ_EXTERNAL_STORAGE to "📁 Read Storage",
+            android.Manifest.permission.WRITE_EXTERNAL_STORAGE to "📁 Write Storage",
+            android.Manifest.permission.READ_PHONE_STATE to "📱 Phone State",
+            android.Manifest.permission.READ_PHONE_NUMBERS to "📱 Read Phone Numbers",
+            android.Manifest.permission.POST_NOTIFICATIONS to "🔔 Post Notifications"
+        )
+
+        var grantedCount = 0
+        for ((permission, label) in permissions) {
+            val granted = checkSelfPermission(permission) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            if (granted) grantedCount++
+            layout.addView(infoText("${if (granted) "✅" else "❌"} $label"))
+        }
+        layout.addView(infoText("\n📊 $grantedCount / ${permissions.size} permissions granted\n"))
+
+        layout.addView(infoText("Special Permissions:"))
+        layout.addView(infoText("${if (android.provider.Settings.canDrawOverlays(this)) "✅" else "❌"} Display over other apps"))
+        layout.addView(infoText("${if (isNotificationListenerEnabled()) "✅" else "❌"} Notification Access"))
+        layout.addView(infoText("${if (com.ai.agent.accessibility.AgentAccessibilityService.isRunning()) "✅" else "❌"} Accessibility Service running"))
+        layout.addView(infoText("${if (com.ai.agent.accessibility.AgentAccessibilityService.isEnabled(this)) "✅" else "❌"} Accessibility enabled\n"))
+
+        layout.addView(Button(this).apply {
+            text = "📱 Request All Runtime Permissions"
+            setOnClickListener {
+                val toRequest = permissions.filter {
+                    checkSelfPermission(it.first) != android.content.pm.PackageManager.PERMISSION_GRANTED
+                }.map { it.first }.toTypedArray()
+                if (toRequest.isNotEmpty()) requestPermissions(toRequest, 100)
+                else Toast.makeText(this@HubActivity, "All permissions granted!", Toast.LENGTH_SHORT).show()
+            }
+        })
+        layout.addView(Button(this).apply {
+            text = "👁 Enable Display Over Apps"
+            setOnClickListener { startActivity(Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:$packageName"))) }
+        })
+        layout.addView(Button(this).apply {
+            text = "♿ Enable Accessibility"
+            setOnClickListener { startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+        })
+        layout.addView(Button(this).apply {
+            text = "🔔 Enable Notification Access"
+            setOnClickListener { startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")) }
+        })
+        return layout
+    }
+
+    private fun isNotificationListenerEnabled(): Boolean {
+        val flat = android.provider.Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
+        return flat != null && flat.contains(packageName)
     }
 }
