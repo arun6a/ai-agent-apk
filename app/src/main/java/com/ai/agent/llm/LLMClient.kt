@@ -237,8 +237,10 @@ class LLMClient(private val context: Context) {
                 put("parts", JSONArray().put(JSONObject().put("text", userMessage)))
             }))
             put("generationConfig", JSONObject().apply {
-                put("temperature", 0.7)
-                put("maxOutputTokens", 1024)
+                put("temperature", 0.3)  // v6.4.2: lower temp for more consistent JSON
+                put("maxOutputTokens", 8192)  // v6.4.2: was 1024 (too low — JSON got cut off!)
+                put("topP", 0.9)
+                put("topK", 40)
             })
         }
         return body.toString()
