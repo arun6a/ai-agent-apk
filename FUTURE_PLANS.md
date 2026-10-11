@@ -1,213 +1,201 @@
-# Future Plans — Updated v6.3.2
+# Master Future Plans — AI Agent APK
 
 **Date**: 2026-10-11
-**Updated by**: Sandbox-2
-**Previous version**: FUTURE_PLANS.md (by Sandbox-1, v4.0.1)
+**Merged by**: Sandbox-2 (combining Sandbox-1 + Sandbox-2 visions)
+**Current version**: v6.3.2
 
 ---
 
-## What's Been Accomplished (v4.0 → v6.3.2)
+## What's Been Done (v1.0 → v6.3.2)
 
-Since the original FUTURE_PLANS.md, we've shipped:
-
-- ✅ Skills system (20 built-in + user-created via chat)
-- ✅ Plugin system (10 plugins)
-- ✅ Token optimization (dynamic prompt, 5 modes)
-- ✅ 36 trigger types (was 16)
-- ✅ 12 AI providers (was 6)
+- ✅ 100+ tools (18 categories)
+- ✅ 36 trigger types
+- ✅ 20 skills + user-created via chat
+- ✅ 10 plugins
+- ✅ 12 AI providers
+- ✅ 5 prompt modes (Smart/Dynamic/Balanced/Fast/Custom)
+- ✅ Hub with 13 sections
 - ✅ File attachments + knowledge store
-- ✅ Hub activity (13 sections)
 - ✅ Strategy switching + always learn
 - ✅ HTTP server for remote control
 - ✅ Browser ↔ Chat quick switch
 - ✅ Google Voice input
 - ✅ Overlay fix (no duplicates)
 - ✅ App folders on install
+- ✅ Skill management (create/delete/get)
+- ✅ Direct web search (no proxy needed)
 
 ---
 
-## Updated Roadmap
+## v6.4.0 — Bug Fixes (NEXT)
 
-### Phase 1: Stabilization (v6.4.0) — NEXT
+| # | Feature | Priority | From |
+|---|---|---|---|
+| 1 | Screenshot MIUI fix (PixelCopy/MediaProjection) | 🔴 Critical | Both |
+| 2 | Timeout system (30s/step, 3min/task) | 🔴 High | Both |
+| 3 | Browser stays foreground (all steps visible) | 🟡 Medium | Sandbox-1 |
+| 4 | Ask user for help (after 3 failures) | 🟡 Medium | Sandbox-1 |
+| 5 | Stop button polish | 🟢 Low | Both |
+| 6 | Empty catch blocks logging | 🟢 Low | Sandbox-1 |
 
-| Feature | Priority | Status |
+---
+
+## v7.0.0 — Reliability + Trust
+
+| # | Feature | From |
 |---|---|---|
-| Screenshot MIUI fix (PixelCopy/MediaProjection) | 🔴 Critical | Not started |
-| Timeout system (30s/step, 3min/task) | 🔴 High | Not started |
-| Ask user for help (after 3 failures) | 🟡 Medium | Not started |
-| Browser stays foreground (all steps visible) | 🟡 Medium | Not started |
-| Stop button polish | 🟢 Low | Partially done |
-| Empty catch blocks logging | 🟢 Low | Not started |
-
-### Phase 2: Developer AI Agent (v7.0.0)
-
-**Vision**: The AI becomes a coding assistant that can write + deploy code on the device.
-
-| Feature | Description |
-|---|---|
-| **Code execution** | AI writes Python/JavaScript code + runs it on-device (via Termux or embedded interpreter) |
-| **Code generation** | "Write a script that checks my battery every hour and logs it" → AI writes + saves + creates a rule |
-| **APK building** | AI can modify its own code, rebuild APK, and install (meta-programming) |
-| **Termux integration** | Full Linux environment — Python, Node.js, Git, etc. |
-| **GitHub integration** | AI can push code, create PRs, manage issues from the phone |
-| **Debug mode** | AI reads its own logcat, identifies bugs, suggests fixes |
-| **Skill compiler** | AI writes new skills in natural language → compiles to .md files |
-| **Plugin builder** | AI creates new plugin JSON files based on user needs |
-| **Auto-testing** | AI tests its own tools + reports failures |
-
-**Example flows:**
-```
-User: "Write a Python script that checks my battery every hour and saves to a file"
-AI: 
-  1. Writes Python script to /storage/.../scripts/battery_log.py
-  2. Creates a rule: every 1 hour → runShellCommand("python battery_log.py")
-  3. Reply: "Script created + scheduled. It will log battery every hour."
-
-User: "Check your own logs for any errors"
-AI:
-  1. runShellCommand("logcat -d *:E -s AgentHttpServer:V MainActivity:V")
-  2. Analyzes errors
-  3. Reply: "Found 3 errors. 1. Screenshot fails on MIUI. 2. Empty catch in WiFiReceiver. 3. ..."
-
-User: "Create a new skill for checking train schedules"
-AI:
-  1. createSkill("train-schedule", "Check train schedules", "train|irctc|railway", "1. webSearch...")
-  2. Reply: "Skill 'train-schedule' created!"
-```
-
-### Phase 3: Image & Video Editing (v7.5.0)
-
-**Vision**: AI can edit photos + videos on-device.
-
-| Feature | Description |
-|---|---|
-| **Image editing** | Crop, resize, rotate, filters, text overlay — via on-device libraries |
-| **Image generation** | AI generates images (Stable Diffusion on-device, or cloud API) |
-| **Video editing** | Trim, merge, add music, subtitles, transitions |
-| **Screenshot annotation** | AI captures screenshot + annotates (arrows, highlights, text) |
-| **Photo enhancement** | Auto-enhance brightness, contrast, noise reduction |
-| **Batch processing** | "Resize all photos in this folder to 1080p" |
-| **Meme generator** | AI creates memes from templates + user text |
-| **Collage maker** | AI combines multiple photos into a collage |
-| **QR code generator** | Generate QR codes from text/URLs |
-| **Barcode scanner** | Scan barcodes + look up products |
-
-**Example flows:**
-```
-User: [attaches photo] "Crop this to square and add a filter"
-AI:
-  1. readAttachment("photo.jpg")
-  2. runShellCommand("ffmpeg -i photo.jpg -vf crop=1080:1080:0:0,scale=1080:1080 photo_square.jpg")
-  3. Reply: "Done! Cropped to 1080x1080. Saved as photo_square.jpg"
-
-User: "Generate an image of a sunset over mountains"
-AI:
-  1. Calls image generation API (or on-device Stable Diffusion)
-  2. Saves to /storage/.../attachments/sunset_mountains.png
-  3. Reply: "Generated sunset image! Saved to attachments."
-
-User: "Make a meme with this photo and text 'When the code works'"
-AI:
-  1. readAttachment("photo.jpg")
-  2. Adds text overlay at top + bottom
-  3. Saves as meme.jpg
-  4. Reply: "Meme created! Want me to share it?"
-```
-
-### Phase 4: Video Generation (v8.0.0)
-
-**Vision**: AI generates short videos.
-
-| Feature | Description |
-|---|---|
-| **Text-to-video** | "Create a 10-second video of waves on a beach" → AI generates via API |
-| **Photo-to-video** | Animate a static photo (ken burns effect, zoom, pan) |
-| **Slideshow video** | Create slideshow from photos + music |
-| **GIF maker** | Create animated GIFs from video clips |
-| **Screen recording** | Record screen + narrate (AI speaks while recording) |
-| **Video transcription** | Transcribe video audio to text |
-| **Video translation** | Translate video subtitles to another language |
-| **Video compression** | Reduce video file size without quality loss |
-| **Video format conversion** | Convert MKV→MP4, WEBM→MP4, etc. |
-
-### Phase 5: Advanced AI (v9.0.0)
-
-| Feature | Description |
-|---|---|
-| **Anthropic prompt caching** | 90% token savings |
-| **Multi-model routing** | Groq for simple, Claude for complex reasoning |
-| **Local LLM** | On-device Llama 3.2 for offline tasks |
-| **Streaming responses** | AI replies stream in real-time |
-| **Voice conversation** | Continuous voice mode |
-| **Multi-turn context** | Full conversation memory (not just last 2 messages) |
-| **Proactive AI** | AI suggests actions before user asks |
-| **Context awareness** | AI knows location, time, calendar, recent apps |
-
-### Phase 6: UI/UX Polish (v7.0.0 — parallel with Developer Agent)
-
-| Feature | Description |
-|---|---|
-| Proper XML layouts (replace programmatic UI) | |
-| Bottom navigation (5 tabs) | |
-| Status orb (animated agent state) | |
-| Live status card (per-step progress) | |
-| Suggestion chips | |
-| Onboarding wizard | |
-| Markdown rendering | |
-| Dark/Light theme | |
-
-### Phase 7: Ecosystem (v10.0.0)
-
-| Feature | Description |
-|---|---|
-| Telegram bot (remote control via Telegram) | |
-| Web dashboard (browser-based control panel) | |
-| API server (other apps call AI Agent) | |
-| Tasker integration | |
-| Smart home control (IoT devices) | |
-| Auto-pilot mode (AI monitors + acts autonomously) | |
-| Skill marketplace (share + download skills) | |
-| Plugin marketplace (download new tool plugins) | |
-| Workflow recorder (record actions → create skill) | |
-| Multi-device sync (sync memory/rules across phones) | |
+| 7 | AI Confidence Score (show %, ask if <70%) | Sandbox-1 |
+| 8 | Undo Button (every action has undo) | Sandbox-1 |
+| 9 | Skill Recording (user does once → AI records → 1 call next time) | Sandbox-1 |
+| 10 | WhatsApp auto-send (tap send button automatically) | Sandbox-1 |
+| 11 | Timeout: graceful stop + tell user what failed | Both |
+| 12 | Better error messages (distinguish "no text" from "screenshot broken") | Both |
 
 ---
 
-## Old Plans vs New Plans
+## v7.5.0 — Speed + Connectivity
 
-| Old Plan (Sandbox-1) | Status | Updated Plan |
+| # | Feature | From |
 |---|---|---|
-| Token optimization (4K→1.5K) | ✅ DONE | Dynamic prompt (11K→750 tokens in Fast mode) |
-| Skills system (JSON + Kotlin) | ✅ DONE | 20 built-in skills + user-created via chat |
-| Plugin system | ✅ DONE | 10 plugins |
-| Marketplace | 🔄 Future | Skill + Plugin marketplace (v10.0.0) |
-| Workflow recorder | 🔄 Future | Record actions → create skill (v10.0.0) |
-| Telegram bot | 🔄 Future | Remote control via Telegram (v10.0.0) |
-| Developer platform | ❌ Changed | Not a platform — it's a personal assistant that CAN code (v7.0.0) |
+| 13 | Cache common results (battery, time — don't re-fetch) | Sandbox-1 |
+| 14 | Predictive actions (AI learns user's routine) | Sandbox-1 |
+| 15 | Local LLM for simple tasks (no API call needed) | Both |
+| 16 | Background pre-loading (AI predicts next step) | Sandbox-1 |
+| 17 | Telegram bot (control phone from laptop/anywhere) | Both |
+| 18 | AI Diary (nightly summary: what I did, calls used, failures) | Sandbox-1 |
 
 ---
 
-## What the User Wants Next?
+## v8.0.0 — Proactive AI + Developer Agent
 
-Based on our conversations:
-
-1. **Screenshot MIUI fix** — the #1 remaining bug
-2. **UI polish** — proper layouts, not programmatic
-3. **Developer agent** — AI can write + run code
-4. **Image/video editing** — on-device media processing
-5. **Image/video generation** — AI creates visual content
+| # | Feature | From |
+|---|---|---|
+| 19 | Proactive AI (7am → morning briefing, battery low → suggest) | Sandbox-1 |
+| 20 | Context awareness (location, time, calendar, recent apps) | Sandbox-1 |
+| 21 | Code execution (write Python/JS → run on-device via Termux) | Sandbox-2 |
+| 22 | Code generation ("write a script that logs battery hourly") | Sandbox-2 |
+| 23 | GitHub integration (push code, create PRs, manage issues) | Sandbox-2 |
+| 24 | Debug mode (AI reads own logcat, identifies bugs) | Sandbox-2 |
+| 25 | Skill compiler (AI writes skills from natural language) | Sandbox-2 |
+| 26 | Auto-testing (AI tests own tools + reports failures) | Sandbox-2 |
+| 27 | APK self-modify (AI can modify code, rebuild, install) | Sandbox-2 |
 
 ---
 
-## Priority Order (My Recommendation)
+## v8.5.0 — Image Editing + Generation
 
-```
-v6.4.0 — Bug fixes (screenshot, timeout, browser foreground)
-v7.0.0 — Developer AI Agent + UI polish (parallel)
-v7.5.0 — Image editing + generation
-v8.0.0 — Video editing + generation + streaming AI
-v9.0.0 — Advanced AI (caching, multi-model, local LLM)
-v10.0.0 — Ecosystem (Telegram, web dashboard, marketplace)
-```
+| # | Feature | From |
+|---|---|---|
+| 28 | Image editing (crop, resize, rotate, filters via ffmpeg) | Sandbox-2 |
+| 29 | Image generation (Stable Diffusion on-device or cloud API) | Sandbox-2 |
+| 30 | Screenshot annotation (arrows, highlights, text) | Sandbox-2 |
+| 31 | Photo enhancement (auto brightness, contrast, noise reduction) | Sandbox-2 |
+| 32 | Batch processing ("resize all photos to 1080p") | Sandbox-2 |
+| 33 | Meme generator (templates + user text) | Sandbox-2 |
+| 34 | QR code generator + scanner | Sandbox-2 |
+| 35 | Collage maker (combine multiple photos) | Sandbox-2 |
 
-— Sandbox-2
+---
+
+## v9.0.0 — Video Editing + Generation + Personal AI
+
+| # | Feature | From |
+|---|---|---|
+| 36 | Video editing (trim, merge, add music, subtitles) | Sandbox-2 |
+| 37 | Text-to-video ("create 10s video of waves") | Sandbox-2 |
+| 38 | Photo-to-video (animate static photos, ken burns) | Sandbox-2 |
+| 39 | Slideshow video (photos + music) | Sandbox-2 |
+| 40 | GIF maker (create animated GIFs) | Sandbox-2 |
+| 41 | Screen recording (AI narrates while recording) | Sandbox-2 |
+| 42 | Video transcription (audio to text) | Sandbox-2 |
+| 43 | Video translation (subtitle translation) | Sandbox-2 |
+| 44 | Video compression (reduce file size) | Sandbox-2 |
+| 45 | Learn user schedule (calendar + usage patterns) | Sandbox-1 |
+| 46 | Learn contacts (who is Mom, who is boss) | Sandbox-1 |
+| 47 | Learn preferences (always opens YouTube at 8pm) | Sandbox-1 |
+| 48 | Learn apps (which apps you use most) | Sandbox-1 |
+| 49 | Voice ID (only responds to YOUR voice) | Sandbox-1 |
+
+---
+
+## v9.5.0 — Advanced AI + Voice
+
+| # | Feature | From |
+|---|---|---|
+| 50 | Anthropic prompt caching (90% token savings) | Sandbox-2 |
+| 51 | Multi-model routing (Groq simple, Claude complex) | Sandbox-2 |
+| 52 | Streaming responses (real-time, like ChatGPT) | Both |
+| 53 | Continuous voice conversation (push-to-talk → reply → listen) | Both |
+| 54 | Multi-turn context (full conversation memory) | Both |
+| 55 | AI Voice Personality (Friendly/Professional/Funny) | Sandbox-1 |
+| 56 | Custom wake word ("Hey Arun") | Sandbox-1 |
+| 57 | Voice emotions (happy when success, concerned when stuck) | Sandbox-1 |
+| 58 | Whisper STT (high-accuracy speech recognition) | Sandbox-2 |
+| 59 | ElevenLabs TTS (natural voice cloning) | Sandbox-2 |
+
+---
+
+## v10.0.0 — Connected Ecosystem
+
+| # | Feature | From |
+|---|---|---|
+| 60 | Web dashboard (browser-based control panel) | Both |
+| 61 | API server (other apps call AI Agent) | Sandbox-2 |
+| 62 | Tasker/Automate integration | Sandbox-2 |
+| 63 | Smart home control (lights, AC, TV via IoT) | Both |
+| 64 | Auto-pilot mode (AI monitors + acts autonomously) | Sandbox-2 |
+| 65 | Skill marketplace (share + download skills) | Both |
+| 66 | Plugin marketplace (download new tool plugins) | Both |
+| 67 | Cross-device sync (rules/memory across phones) | Both |
+| 68 | Family mode (each person has own AI profile) | Sandbox-1 |
+| 69 | AI-to-AI communication (phone talks to tablet) | Sandbox-1 |
+
+---
+
+## v10.5.0 — Advanced Features
+
+| # | Feature | From |
+|---|---|---|
+| 70 | Context Camera (point at menu/product/sign → AI sees) | Sandbox-1 |
+| 71 | Music identification (like Shazam) | Sandbox-2 |
+| 72 | Audio recording + transcription | Sandbox-2 |
+| 73 | Wear OS companion (smartwatch app) | Sandbox-2 |
+| 74 | Home screen widget | Sandbox-2 |
+| 75 | Onboarding wizard (first-launch setup) | Both |
+| 76 | Markdown rendering in chat | Both |
+| 77 | Dark/Light theme toggle | Both |
+| 78 | UI polish (proper layouts, animations) | Both |
+
+---
+
+## UI/UX Improvements (Parallel — Any Version)
+
+| # | Feature |
+|---|---|
+| 79 | Bottom navigation (5 tabs) |
+| 80 | Status orb (animated agent state indicator) |
+| 81 | Live status card (per-step progress with elapsed time) |
+| 82 | Suggestion chips above input |
+| 83 | Proper XML layouts (replace programmatic UI) |
+
+---
+
+## Summary
+
+| Phase | Version | Focus | Feature Count |
+|---|---|---|---|
+| Bug Fixes | v6.4.0 | Fix what's broken | 6 |
+| Reliability | v7.0.0 | Trust + undo + skill recording | 6 |
+| Speed + Connectivity | v7.5.0 | Fast + Telegram + diary | 6 |
+| Proactive + Developer | v8.0.0 | AI acts first + can code | 9 |
+| Image | v8.5.0 | Edit + generate images | 8 |
+| Video + Personal | v9.0.0 | Edit/generate video + learn user | 14 |
+| Advanced AI + Voice | v9.5.0 | Streaming + caching + voice personality | 10 |
+| Ecosystem | v10.0.0 | Web + IoT + marketplace + sync | 10 |
+| Advanced Features | v10.5.0 | Camera + audio + wearable + UI | 9 |
+| UI/UX | Parallel | Layouts + animations + nav | 5 |
+| **TOTAL** | | | **83 features** |
+
+We build one by one. Everything stays in the plan. 🚀
+
+— Sandbox-2 (merged with Sandbox-1's vision)
