@@ -325,7 +325,7 @@ object AIProvider {
     // "fast" → minimal prompt (tool names + 8 rules, ~750 tokens)
     // "custom" → user-edited prompt from storage
     private const val KEY_PROMPT_MODE = "prompt_mode"
-    val DEFAULT_PROMPT_MODE = "dynamic"
+    val DEFAULT_PROMPT_MODE = "smart"  // v6.3.2: dynamic disabled by default, user can enable
 
     fun getPromptMode(context: Context): String {
         return getPrefs(context).getString(KEY_PROMPT_MODE, DEFAULT_PROMPT_MODE) ?: DEFAULT_PROMPT_MODE

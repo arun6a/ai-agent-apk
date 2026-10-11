@@ -15,6 +15,7 @@ Calendar: getCalendarEvents, createCalendarEvent, setAlarm, setTimer
 Device: getBatteryLevel, getCurrentTime, getNetworkInfo, getDeviceInfo, getVolume, setVolume, setBrightness, toggleFlashlight, toggleWifi, getBluetoothState, getCurrentLocation, openMaps
 Media: mediaPlayPause, mediaNext, mediaPrevious, takePhoto, takeScreenshotToGallery
 Clipboard: getClipboard, setClipboard
+Terminal: runShellCommand(command) — runs shell commands (may need root)
 Vision: analyzeScreen(prompt), findElement(desc), translateText
 Notification: replyToNotification(pkg,msg)
 Skills: executeSkill(name), listSkills, createSkill, deleteSkill, getSkill

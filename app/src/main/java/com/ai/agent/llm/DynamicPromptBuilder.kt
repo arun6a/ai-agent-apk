@@ -138,6 +138,11 @@ Triggers: morning briefing, check price, send whatsapp, play music, order food, 
             name = "Async",
             keywords = listOf("wait", "continue", "later", "follow up", "check back"),
             tools = "Async: wait(seconds), waitAndContinue(seconds,reason)"
+        ),
+        ToolCategory(
+            name = "Terminal",
+            keywords = listOf("terminal", "shell", "command", "run command", "cmd", "execute command", "root", "su "),
+            tools = "Terminal: runShellCommand(command) — runs shell commands (may need root for some commands)"
         )
     )
 
